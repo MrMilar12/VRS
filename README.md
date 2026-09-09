@@ -1,6 +1,6 @@
 # Vehicle Requisition & Scheduling (VRS)
 
-A working native PHP 8 application with PDO, MySQL/MariaDB, HTML, CSS, and vanilla JavaScript. No frameworks, build tools, CDNs, JavaScript libraries, or external fonts are required.
+A working native PHP 8 application with PDO, MySQL/MariaDB, HTML, CSS, and vanilla JavaScript. No frameworks, build tools, CDNs, or external fonts are required. The print slip includes a locally bundled MIT-licensed QR generator.
 
 ## Try the local demo
 
@@ -57,7 +57,7 @@ A setup guide is available at `setup.php`. Demo data does not automatically migr
 - Native calendar: month, week, day, and vehicle timeline; navigation, date selection, vehicle/type/office/driver/status/destination filters, event detail dialog, and daily schedule printing. Requesters see their requests; supervisors see their office; administrative and dispatch roles see all requests. All roles can see fleet maintenance blocks.
 - Fleet records including validated, re-encoded JPEG/PNG vehicle photographs; drivers, offices, users, roles, and account activation. Deactivate records instead of deleting operational history.
 - Dispatch, return, actual times, odometers, distance, condition, incident remarks, and final completion.
-- Printable approved requisitions with saved approvers and trip records; browser Print / Save as PDF; print-view audit. The template follows the pasted specification: no original form image was attached, so it is not an exact reproduction of an agency form.
+- Printable approved requisitions with saved approvers and trip records; browser Print / Save as PDF; print-view audit. The template follows the supplied Requisition_Slip_for_Vehicle_Use.pdf, including its accountability acknowledgement, approval signatures, and office record. A locally generated QR code encodes only the saved slip reference (for example, VR-2026-0001).
 - Reporting date/office filters, office totals, scheduled vehicle hours, mileage, requested fuel, driver/requester trip history, late returns, outcomes, CSV export, and printing. Fuel figures represent **requested allocation**, not measured fuel consumption. Audit and approval histories have dedicated views. Maintenance appears on the maintenance page and calendar.
 - In-app notifications for submission, review, and status changes; unread indicators and mark-as-read.
 
@@ -124,3 +124,11 @@ New and edited requisitions use a required address selector: open the place drop
 Search uses the Photon public service over HTTPS from the browser. It requires internet access and JavaScript; search runs after a typing pause, with per-page caching, request cancellation, a timeout, and at least one second between requests. Map previews contact OpenStreetMap. No API key is required. Photon’s public service has no availability guarantee and is intended for reasonable request volumes; use a private Photon endpoint for higher traffic. Set `address_search_url` in `config/local.php` to an HTTPS Photon-compatible endpoint with browser CORS enabled. See https://github.com/komoot/photon for service documentation.
 
 Dropdown regression checks: open `tests/place-dropdown.html` directly from the filesystem in Chrome. This isolated fixture uses mocked search responses and checks dropdown reopening, keyboard/mouse selection, map visibility, validation, and search failure recovery; it does not contact the address provider. The application deliberately blocks serving the tests directory over HTTP.
+
+## Vehicle slip template and QR
+
+The vehicle slip uses `includes/print-slip.php` and `assets/css/vehicle-slip.css`, separate from the daily schedule print styles. It recreates the supplied one-page Letter form with populated personnel, passengers, vehicle and journey details, fuel choices, accountability acknowledgement, approval names/dates, and return records. Handwritten signature lines remain blank. Long passenger lists or text can continue onto additional pages rather than being clipped.
+
+The locally bundled Project Nayuki QR generator (`assets/js/vendor/qrcodegen.js`, MIT license retained in the file, downloaded from https://www.nayuki.io/res/qr-code-generator-library/qrcodegen.js) creates a vector QR with a four-module white border. The payload is exactly the saved requisition reference, not a URL or personal data. JavaScript is required for QR generation; the Print button enables once generation succeeds. No external QR service or network connection is needed.
+
+Run the isolated form rendering checks with `php tests/print-slip.php`. For a populated preview without touching the database, run `php tests/print-slip.php --render > /tmp/vrs-slip-preview.html` and open that file in a browser. The regular HTTP smoke suite also checks the populated print route.

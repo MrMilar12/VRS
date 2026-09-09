@@ -82,7 +82,7 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
             officer=Client(base);officer.login('admin@vrs.local')
             available=json.loads(officer.get(f'api.php?action=availability&id={rid}&vehicle_id=3&driver_id=5')[1]);check(available['available'],'Availability API')
             text,_=officer.post('actions.php',{'action':'approve','id':rid,'password':'Demo@12345','vehicle_id':'3','driver_id':'5','remarks':'Confirmed'});check('Request marked approved' in text,'Administrative assignment and approval')
-            text,_=requester.post('print/requisition.php',{'id':rid});check('VEHICLE REQUISITION SLIP' in text and 'HTTP Integration Test - corrected' in text,'Populated requisition printing')
+            text,_=requester.post('print/requisition.php',{'id':rid});check('Requisition Slip for Vehicle Use' in text and 'HTTP Integration Test - corrected' in text and 'data-slip-qr="VR-' in text,'Populated requisition printing')
             # A second request with an overlapping vehicle must fail final approval.
             _,url=requester.post('actions.php',{**data,'destination':'HTTP conflict test'});conflict_id=re.search(r'id=(\d+)',url)[1]
             supervisor.post('actions.php',{'action':'approve','id':conflict_id,'password':'Demo@12345'})

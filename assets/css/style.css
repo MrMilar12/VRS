@@ -97,3 +97,31 @@ label{font-size:12px;color:#4c623b}.field-hint,.field-note,.muted{color:#6a7b59}
 
 /* Single searchable place dropdown. */
 .place-combobox{position:relative;min-width:0}.place-control{display:flex;align-items:center;border:1px solid #d7dfcb;border-radius:9px;background:#fffffc}.place-control:focus-within{outline:3px solid #edf2da;border-color:#78944a}.place-control input{width:100%;min-width:0;border:0;background:transparent;outline:none!important}.place-control button{flex-shrink:0;margin-right:5px}.place-combobox [role=listbox]{position:absolute;top:calc(100% + 6px);left:0;right:0;max-height:270px;overflow-y:auto;z-index:20;background:#fffefb;border:1px solid #d7dfcb;border-radius:12px;box-shadow:0 12px 28px #203e3220;padding:5px}.place-combobox [role=option]{padding:12px;cursor:pointer;line-height:1.5;border-radius:7px;font-size:12px;overflow-wrap:anywhere}.place-combobox [role=option]:hover,.place-combobox [aria-selected=true]{background:#eaf0d8;color:#254d3e}.place-empty{padding:14px;font-size:12px;color:#68785a}
+
+/* Readable text, complete labels, and visible boundaries throughout the workspace. */
+@media screen {
+:root{--border:#aebaa5;--muted:#52634a}
+.content,.form-main,.dashboard-grid>.panel,.detail-layout>div{min-width:0}
+.page-heading h1,.page-heading p,.trip-info,.vehicle-name h3,.notification-row,.profile strong{overflow-wrap:anywhere}
+.panel,.stat-card,.vehicle-card,.filter-bar,.panel-heading,.panel-bottom,.trip-item,.table-footer,.page-footer{border-color:var(--border)}
+.panel-heading p,.page-heading p,.stat-top,.stat-card>small,.trip-info p,.trip-meta,.trip-time>span,.trip-time strong small,.fleet-donut span,.fleet-legend>div,.data-table td small,.bottom-insights>div,.page-footer,.table-footer,.field-hint,.field-note,.muted,.detail-grid dt,.history-item p,.history-item small,.workflow-list span,.requester-summary small,.vehicle-specs,.notification-row small,.report-bars>div>span,.calendar-legend,.legend-tip,.agenda-main p,.agenda-main small,.agenda-time span,.timeline-vehicle small{color:#52634a;font-size:12px;line-height:1.65}
+label,.btn,.text-link,.panel-bottom,.trip-info h3,.data-table,.data-table td strong,.table-title,.cell-office,.detail-grid dd,.history-item strong,.workflow-list strong{font-size:13px;line-height:1.5}
+input,select,textarea{border-color:#899a7d;color:#263c2b;min-height:44px;font-size:14px}
+input::placeholder,textarea::placeholder{color:#63715a;font-size:13px;opacity:1}
+.search-field,.place-control{border-color:#899a7d}.place-control:focus-within,.search-field:focus-within{outline:3px solid #78944a}
+.data-table th{font-size:11px;color:#435738;background:#edf1e5;line-height:1.5}
+.data-table th,.data-table td{border:1px solid #aebaa5;white-space:normal;overflow-wrap:anywhere}
+.data-table td small{white-space:normal}.data-table{min-width:740px}.table-scroll{max-width:100%;overflow:auto}
+.office-chip,.count-pill,.live-pill,.badge{font-size:11px}.badge{white-space:normal;line-height:1.5}
+.trip-info p{white-space:normal;overflow:visible;text-overflow:clip;max-width:none}
+.trip-meta{flex-wrap:wrap;white-space:normal}.trip-meta span:last-child{display:flex}.trip-meta span{flex-wrap:wrap}.cell-office{display:inline;white-space:normal}
+.trip-status{max-width:38%}.trip-status .badge{font-size:11px}
+.nav-item{font-size:13px;line-height:1.5}.nav-label{color:#bdcdb4;font-size:10px}.workspace small{white-space:normal;max-width:100%;font-size:11px;line-height:1.5}.workspace>div{min-width:0;overflow-wrap:anywhere}.sidebar-bottom,.sidebar-bottom small{font-size:11px}
+.calendar-cell,.weekday,.calendar-grid,.calendar-toolbar,.calendar-legend{border-color:#aebaa5}.weekday{font-size:12px;color:#435738}.calendar-event,.calendar-event span{font-size:11px;white-space:normal;overflow-wrap:anywhere;overflow:visible;line-height:1.5}.calendar-event span{opacity:1}.day-number{font-size:12px}.outside .day-number{color:#69755f}.more-events{font-size:12px;color:#405b2f}.calendar-filters input,.calendar-filters select{font-size:12px;min-height:40px}.calendar-nav,.calendar-toolbar{flex-wrap:wrap}.segmented{flex-wrap:wrap}.timeline-event{font-size:11px}.timeline-hours{font-size:10px;color:#50643e}
+.workflow-list li:after{background:#aebaa5}.detail-grid,.history-list{overflow-wrap:anywhere}.requester-summary{flex-wrap:wrap}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #607e3d;outline-offset:3px}
+@media(max-width:980px){.page-heading p{font-size:13px}.form-aside{display:block}.trip-item{flex-wrap:wrap}.trip-status{margin-left:auto}.profile strong{max-width:180px}}
+@media(max-width:720px){.page-heading h1{line-height:1.2}.stat-card>small,.stat-top{font-size:12px}.trip-info{overflow:visible}.trip-info h3{font-size:13px}.trip-info p{max-width:none}.trip-status .badge{font-size:11px}.trip-meta{font-size:12px}.panel-heading{flex-wrap:wrap}.panel-heading .text-link{font-size:12px}.vehicle-specs,.page-footer,.bottom-insights>div,.field-hint{font-size:12px}.requester-summary>.badge{display:inline-flex}.form-grid>*,.filter-bar>*{min-width:0}.form-actions{flex-wrap:wrap}.button-row .btn{font-size:12px;white-space:normal}.btn{white-space:normal;text-align:center}.legend-tip{display:block;width:100%;font-size:11px}.filter-bar .search-field{flex-basis:100%}.calendar-nav h2{overflow-wrap:anywhere}}
+}
+@media screen and (max-width:720px){.welcome-banner{flex-direction:column}.welcome-banner>div:first-child{max-width:100%}.banner-art{position:relative;inset:auto;width:100%;height:160px;opacity:1;margin-top:12px;flex-shrink:0}.art-circle{right:25px;top:0;width:150px;height:150px}.art-car{top:45px;right:85px}.art-label{right:12px;bottom:5px}.art-location{right:32px;top:20px}}
+@media screen and (max-width:400px){.topbar{height:auto;min-height:68px;flex-wrap:wrap;gap:10px;padding:12px 16px}.breadcrumb{width:100%;flex-wrap:wrap;min-width:0}.breadcrumb strong{overflow-wrap:anywhere}.top-actions{width:100%;justify-content:flex-end;gap:12px}}
