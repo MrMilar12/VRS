@@ -1,0 +1,12 @@
+<?php
+function record_schemas(): array {
+ $options=fn($items)=>array_combine($items,$items);
+ $offices=array_column(all("SELECT id,name FROM offices WHERE status='Active'"),'name','id');
+ return [
+ 'vehicles'=>['title'=>'Vehicles','singular'=>'vehicle','description'=>'Manage your fleet and keep every journey moving.','fields'=>[
+ 'model'=>['label'=>'Brand & model'],'type'=>['label'=>'Vehicle type','options'=>$options(['Van','MPV','SUV','Pickup','Sedan','Bus'])],'plate'=>['label'=>'Plate number'],'property_number'=>['label'=>'Property number'],'capacity'=>['label'=>'Passenger capacity','type'=>'number','min'=>1],'odometer'=>['label'=>'Current odometer (km)','type'=>'number'],'registration_expiry'=>['label'=>'Registration expiration','type'=>'date'],'condition_text'=>['label'=>'Vehicle condition'],'status'=>['label'=>'Status','options'=>$options(['Available','Reserved','Under Maintenance','Inactive'])]]],
+ 'drivers'=>['title'=>'Drivers','singular'=>'driver','description'=>'The people behind every safe, reliable trip.','fields'=>['full_name'=>['label'=>'Full name'],'employee_number'=>['label'=>'Employee number'],'office_id'=>['label'=>'Office','options'=>$offices],'contact'=>['label'=>'Contact number'],'license_number'=>['label'=>'License number'],'license_expiry'=>['label'=>'License expiration','type'=>'date'],'status'=>['label'=>'Status','options'=>$options(['Available','On Leave','Inactive'])]]],
+ 'offices'=>['title'=>'Offices','singular'=>'office','description'=>'Organize requesting offices and their supervisors.','fields'=>['code'=>['label'=>'Office code'],'name'=>['label'=>'Office name'],'head'=>['label'=>'Office head'],'supervisor'=>['label'=>'Immediate supervisor'],'contact'=>['label'=>'Contact details'],'status'=>['label'=>'Status','options'=>$options(['Active','Inactive'])]]],
+ 'users'=>['title'=>'Users & roles','singular'=>'user','description'=>'Manage access and responsibilities across your organization.','fields'=>['full_name'=>['label'=>'Full name'],'email'=>['label'=>'Email address','type'=>'email'],'office_id'=>['label'=>'Office','options'=>$offices],'position'=>['label'=>'Designation / position'],'role'=>['label'=>'Role','options'=>$options(['Requester','Supervisor','Administrative Officer','Dispatcher','Administrator'])],'status'=>['label'=>'Status','options'=>$options(['Active','Inactive'])],'password'=>['label'=>'Password (10+ characters; leave blank to keep)','type'=>'password','optional'=>true]]]
+ ];
+}
