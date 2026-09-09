@@ -116,3 +116,11 @@ To verify the actual Apache runtime rather than the PHP development server:
     python3 tests/install_mysql.py /Applications/XAMPP/xamppfiles/bin/php --apache
 
 This mode uses a disposable application copy under the VRS directory and a temporary MySQL database, then removes both. It expects Apache at http://localhost/VRS/ and the XAMPP daemon account.
+
+## Destination search and map
+
+New and edited requisitions use a required address selector: open the place dropdown, type at least three characters, then choose a result to preview its pin on an OpenStreetMap map. The chosen address is saved in the existing destination field. Existing destinations remain selectable; map coordinates are preview-only and a saved address must be searched again to preview its pin.
+
+Search uses the Photon public service over HTTPS from the browser. It requires internet access and JavaScript; search runs after a typing pause, with per-page caching, request cancellation, a timeout, and at least one second between requests. Map previews contact OpenStreetMap. No API key is required. Photon’s public service has no availability guarantee and is intended for reasonable request volumes; use a private Photon endpoint for higher traffic. Set `address_search_url` in `config/local.php` to an HTTPS Photon-compatible endpoint with browser CORS enabled. See https://github.com/komoot/photon for service documentation.
+
+Dropdown regression checks: open `tests/place-dropdown.html` directly from the filesystem in Chrome. This isolated fixture uses mocked search responses and checks dropdown reopening, keyboard/mouse selection, map visibility, validation, and search failure recovery; it does not contact the address provider. The application deliberately blocks serving the tests directory over HTTP.

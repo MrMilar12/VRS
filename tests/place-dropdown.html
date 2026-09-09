@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Place dropdown regression checks</title>
+<form><div data-address-picker data-search-url="https://example.invalid/api/">
+<input role="combobox" required aria-controls="options" aria-expanded="false">
+<input type="hidden" name="destination"><button type="button" data-place-toggle>Places</button>
+<div id="options" role="listbox" hidden></div><p role="status"></p>
+<div data-address-map hidden></div><div data-map-placeholder></div><a data-map-link hidden></a>
+</div><button type="button" id="outside">Outside</button></form><pre id="result">RUNNING</pre>
+<script>
+let failSearch=false;
+window.fetch=async()=>{
+ if(failSearch) throw new Error('Offline');
+ return {ok:true,json:async()=>({features:[
+ {properties:{name:'Quezon City Hall',city:'Quezon City',country:'Philippines'},geometry:{coordinates:[121.05,14.65]}},
+ {properties:{name:'Quezon Memorial Circle',city:'Quezon City',country:'Philippines'},geometry:{coordinates:[121.049,14.651]}}
+ ]})};
+};
+</script><script src="../assets/js/address-picker.js"></script><script>
+(async()=>{
+ const output=document.querySelector('#result'),checks=[];
+ const input=document.querySelector('[role=combobox]'),list=document.querySelector('[role=listbox]'),value=document.querySelector('[name=destination]');
+ const check=(condition,message)=>{if(!condition)throw new Error(message);checks.push('PASS: '+message);};
+ const key=key=>input.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));
+ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+ try {
+  input.focus();check(!list.hidden,'Focus opens dropdown');
+  key('Escape');check(list.hidden,'Escape closes dropdown');
+  input.click();check(!list.hidden,'Click reopens a focused dropdown');
+  input.value='Quezon';input.dispatchEvent(new Event('input'));await wait(1600);
+  check(list.querySelectorAll('[role=option]').length===2,'Search renders selectable places');
+  key('Enter');check(value.value.includes('City Hall')&&list.hidden,'Enter selects the first search result');
+  check(!document.querySelector('[data-address-map]').hidden,'Selection displays map');
+  check(input.checkValidity(),'Selected place passes validation');
+  input.click();key('ArrowUp');
+  check(input.getAttribute('aria-activedescendant')===list.lastElementChild.id,'Arrow Up starts at the last place');
+  key('Enter');check(value.value.includes('Memorial'),'Keyboard selection updates submitted address');
+  input.click();list.firstElementChild.click();check(value.value.includes('City Hall'),'Mouse selection updates submitted address');
+  input.click();document.querySelector('#outside').click();check(list.hidden,'Outside click dismisses dropdown');
+  input.click();key('Tab');check(list.hidden,'Tab dismisses dropdown');
+  input.value='Unknown';input.dispatchEvent(new Event('input'));
+  check(!value.value&&!input.checkValidity(),'Unselected text cannot submit');
+  failSearch=true;await wait(1600);
+  check(document.querySelector('[role=status]').textContent.includes('unavailable'),'Failed search displays an error');
+  failSearch=false;input.value='Quezon';input.dispatchEvent(new Event('input'));await wait(1600);
+  check(list.querySelectorAll('[role=option]').length===2,'Cached search recovers after an error');
+  output.textContent=checks.join('\n')+'\nALL PASSED';document.title='PASS';
+ } catch(error) {output.textContent=checks.join('\n')+'\nFAIL: '+error.message;document.title='FAIL';}
+})();
+</script></html>
