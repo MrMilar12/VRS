@@ -1,0 +1,70 @@
+/* Assistant-only visual system. All booking controls retain their original hooks. */
+.booking-layout{--assistant-ink:#243f34;--assistant-muted:#5e7165;--assistant-line:#e1e8dd;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px;align-items:start;padding-bottom:12px}
+.booking-layout>*{min-width:0}.booking-layout [hidden]{display:none!important}
+.booking-layout.booking-chat-only{grid-template-columns:minmax(0,920px);justify-content:center}
+.app-shell .booking-layout .panel{border:1px solid var(--assistant-line);border-radius:24px;box-shadow:0 12px 40px #203e3206;margin:0;background:#fffefb}
+.booking-chat{position:sticky;top:20px;overflow:hidden}.booking-chat-only .booking-chat{position:static}
+.app-shell .assistant-chat-heading{padding:22px 28px;gap:14px;background:#fffefb;border-bottom:1px solid var(--assistant-line)}
+.assistant-identity{display:flex;align-items:center;gap:12px;min-width:0}.assistant-symbol{display:grid;place-items:center;width:43px;height:43px;flex-shrink:0;border-radius:14px;background:#254e3d;color:#e7efcf}
+.assistant-identity h2{font-size:15px!important;color:var(--assistant-ink)}.assistant-identity p{font-size:11px!important;color:var(--assistant-muted)!important;margin-top:4px}
+.app-shell .assistant-reset{background:transparent;border-color:#d6e0d0;color:#4c6552;font-size:11px;min-height:38px;padding:8px 12px}
+.assistant-welcome{position:relative;padding:42px 36px 30px;text-align:center;background:radial-gradient(ellipse at 50% 10%,#eaf0dc 0,transparent 67%),#fffefb}
+.assistant-eyebrow{display:block;font-size:10px;font-weight:650;letter-spacing:1.7px;color:#577047;line-height:1.6}
+.assistant-welcome h2{font:400 clamp(36px,4vw,52px)/1.1 Georgia,serif;letter-spacing:-1.8px;color:#253f32;margin:18px 0 16px}.assistant-welcome h2 em{font-weight:400;color:#637e4b}
+.assistant-welcome>p{font-size:14px;line-height:1.8;color:var(--assistant-muted)}
+.assistant-prompts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:30px auto 0;max-width:720px}
+.assistant-prompts button{display:flex;flex-direction:column;align-items:flex-start;gap:9px;text-align:left;padding:18px 16px;border:1px solid #dce5d4;border-radius:16px;background:#ffffffc9;color:var(--assistant-ink);transition:background .15s,border-color .15s,transform .15s}
+.assistant-prompts button:hover:not(:disabled){background:#f0f5e7;border-color:#9fb58c;transform:translateY(-2px)}
+.assistant-prompt-icon{display:grid;place-items:center;color:#4e6b3a;background:#edf2e3;width:34px;height:34px;border-radius:10px;margin-bottom:3px}.assistant-prompts strong{font-size:13px;font-weight:600}.assistant-prompts small{font-size:11px;line-height:1.5;color:#60745a}
+.booking-messages{display:flex;flex-direction:column;gap:22px;max-height:480px;min-height:220px;overflow:auto;overscroll-behavior:contain;padding:30px 28px;scrollbar-width:thin;scrollbar-color:#c6d3bf transparent}
+.booking-message{max-width:90%;padding:18px 20px;border-radius:5px 18px 18px 18px;background:#f0f4e9;color:var(--assistant-ink);overflow-wrap:anywhere;border:1px solid #e4eadb}
+.booking-message strong{display:block;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#526948}.booking-message p{margin-top:8px;white-space:pre-wrap;font-size:14px;line-height:1.8}
+.booking-message.user{align-self:flex-end;background:#254e3d;color:#fff;border:0;border-radius:18px 5px 18px 18px}.booking-message.user strong{color:#d2e3bd}
+.booking-composer{padding:24px 28px 18px;border-top:1px solid var(--assistant-line);background:#fffefb}
+.booking-composer label{font-size:12px;font-weight:600;color:#3f5948}
+.booking-composer textarea{display:block;width:100%;margin:10px 0 12px;min-height:94px;resize:vertical;background:#f8faf5;border:1px solid #a8baa0;border-radius:14px;font-size:16px;line-height:1.65;padding:15px 16px;color:#2f4a38}
+.booking-composer textarea:focus{border-color:#557c49;outline:3px solid #e3edda;background:white}.booking-composer textarea::placeholder{font-size:14px;color:#6d7e65}
+.booking-composer>div{display:flex;align-items:center;justify-content:space-between;gap:12px}.booking-composer>div span{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--assistant-muted)}
+.app-shell .booking-composer .btn.primary{background:#254e3d;border-color:#254e3d;min-height:44px;padding:12px 20px;border-radius:12px;font-size:13px}
+.booking-composer p{font-size:11px!important;line-height:1.6;margin-top:12px;color:var(--assistant-muted)!important}.booking-composer [data-booking-status]:empty{display:none}.booking-composer [data-booking-status]:not(:empty){border-left:3px solid #a9bb8b;padding:3px 0 3px 10px;color:#3e593b!important}
+.booking-notice{margin:20px 24px;padding:16px 18px;background:#faf2df;border:1px solid #e1cfa6;border-radius:14px;color:#68552e;font-size:13px}.booking-notice p{margin-top:6px}
+.assistant-availability{padding:26px 28px;background:#f7f9f2;border-top:1px solid var(--assistant-line)}.assistant-availability h3{font-size:21px;letter-spacing:-.5px;margin:7px 0 10px;color:var(--assistant-ink)}.assistant-availability>p{font-size:12px;line-height:1.7;margin:12px 0;color:#51664b}
+.assistant-availability [data-availability-items]{display:grid;gap:10px;max-height:420px;overflow:auto;margin-top:18px}
+.assistant-resource{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:17px 18px;border:1px solid #dce5d3;border-radius:14px;background:#fffefb}
+.assistant-resource strong{flex:1;min-width:120px;overflow-wrap:anywhere;font-size:13px;color:#2e4a38}.assistant-resource .badge{border-radius:20px;padding:5px 10px;font-size:10px;flex-shrink:0}.assistant-resource p{width:100%;font-size:12px;line-height:1.7;color:#5b6e53}
+.app-shell .booking-review>.panel-heading{padding:28px;background:#edf3e5;border-bottom-color:#dce5d2}.booking-review h2{font:400 30px/1.2 Georgia,serif!important;letter-spacing:-.8px;margin-top:10px}.booking-review .panel-heading p{font-size:12px;margin-top:10px;color:#51664b}
+.booking-review .form-body{padding:26px}.booking-review label{font-size:12px;font-weight:600;color:#3d5743;line-height:1.7}.booking-review label input:not([type=checkbox]),.booking-review textarea,.booking-review select{display:block;width:100%;margin-top:7px;font-size:16px;border:1px solid #a8baa0;background:#fcfdf9;border-radius:11px;min-height:46px;line-height:1.5;padding:11px 12px}
+.booking-review .form-grid{gap:16px;grid-template-columns:1fr}.booking-review .form-grid>label{min-width:0}.booking-review details{border-top:1px solid #e0e7da;border-bottom:1px solid #e0e7da;padding:8px 0}.booking-review summary{cursor:pointer;font-size:13px;font-weight:600;padding:10px 0;color:#46603e}.booking-review details label{margin-top:12px}.booking-review .checkbox-label{font-weight:400;display:flex;align-items:center;gap:10px}.booking-review-status{padding:15px 16px;border-radius:12px;background:#f0f4e9;color:#4d6445;font-size:12px;line-height:1.8}.booking-review button[type=submit]{min-height:48px;border-radius:12px}
+@media(min-width:1500px){.booking-review .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1100px){.booking-layout{grid-template-columns:1fr}.booking-chat{position:static}.booking-review .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.booking-messages{max-height:420px}}
+@media(max-width:600px){.app-shell .booking-layout .panel{border-radius:20px}.booking-layout{gap:18px}.app-shell .assistant-chat-heading{padding:18px;gap:10px}.assistant-symbol{width:36px;height:36px;border-radius:11px}.assistant-identity{gap:9px}.assistant-identity h2{font-size:13px!important}.assistant-identity p{font-size:10px!important}.app-shell .assistant-reset{font-size:10px;padding:8px;min-height:40px}.assistant-welcome{padding:30px 18px 22px}.assistant-welcome h2{font-size:39px}.assistant-welcome>p{font-size:13px}.assistant-eyebrow{font-size:9px;letter-spacing:1.4px}.assistant-prompts{grid-template-columns:1fr;gap:8px;margin-top:24px}.assistant-prompts button{display:grid;grid-template-columns:34px 1fr;column-gap:12px;row-gap:2px;padding:13px 15px;border-radius:13px;align-items:center}.assistant-prompt-icon{grid-row:span 2;margin:0}.assistant-prompts strong{font-size:13px}.assistant-prompts small{font-size:11px}.booking-composer{padding:20px 18px 16px}.booking-composer textarea{min-height:88px;font-size:16px}.booking-composer>div span{font-size:10px}.app-shell .booking-composer .btn.primary{padding:11px 15px;font-size:12px}.booking-messages{padding:22px 18px;max-height:52svh;gap:18px}.booking-message{max-width:95%;padding:15px 16px}.booking-message p{font-size:14px}.assistant-availability{padding:22px 18px}.assistant-resource{padding:15px}.app-shell .booking-review>.panel-heading{padding:24px}.booking-review .form-body{padding:20px}.booking-review .form-grid{grid-template-columns:1fr}}
+@media(max-width:360px){.assistant-identity p{display:none}.assistant-welcome h2{font-size:34px}.booking-composer>div{align-items:flex-start;flex-direction:column}.booking-composer>div .btn{width:100%}}
+@media(prefers-reduced-motion:reduce){.assistant-prompts button{transition:none}.assistant-prompts button:hover:not(:disabled){transform:none}}
+
+/* Gentle spring-like motion, translucent surfaces, and tactile controls. */
+.booking-layout{--motion-ease:cubic-bezier(.22,1,.36,1);--motion-spring:cubic-bezier(.34,1.35,.64,1)}
+.app-shell .assistant-chat-heading{background:rgba(255,254,251,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.assistant-prompts button,.booking-layout .btn{transition:transform 220ms var(--motion-spring),background-color 180ms ease,border-color 180ms ease,box-shadow 220ms ease}
+.assistant-prompts button:active:not(:disabled),.booking-layout .btn:active:not(:disabled){transform:scale(.97);box-shadow:none}
+.booking-composer textarea,.booking-review input,.booking-review select,.booking-review textarea{transition:background-color 180ms ease,border-color 180ms ease,box-shadow 240ms var(--motion-ease)}
+.booking-composer textarea:focus{box-shadow:0 4px 20px #254e3d09}
+.assistant-prompt-icon{transition:transform 300ms var(--motion-spring),background-color 220ms ease}
+@media(hover:hover) and (pointer:fine){.assistant-prompts button:hover:not(:disabled){transform:translateY(-3px);box-shadow:0 10px 22px #29432c0a}.assistant-prompts button:hover:not(:disabled) .assistant-prompt-icon{transform:rotate(-5deg) scale(1.05)}.booking-layout .btn:hover:not(:disabled){transform:translateY(-1px)}.booking-layout .btn:active:not(:disabled){transform:scale(.97)}}
+.assistant-thinking{display:flex;align-items:center;gap:12px;padding:14px 28px;color:#55704d;font-size:12px;background:#f3f7ed;border-top:1px solid #e1e9d9}
+.assistant-thinking-dots{display:inline-flex;align-items:center;gap:4px;min-height:18px;padding:0 3px}.assistant-thinking-dots i{display:block;width:5px;height:5px;border-radius:50%;background:#678653}
+@media(prefers-reduced-motion:no-preference){
+ .booking-layout{animation:assistant-arrive 650ms var(--motion-ease) both}
+ .assistant-welcome>.assistant-eyebrow{animation:assistant-rise 650ms 80ms var(--motion-ease) both}
+ .assistant-welcome>h2{animation:assistant-rise 750ms 130ms var(--motion-ease) both}
+ .assistant-welcome>p{animation:assistant-rise 750ms 190ms var(--motion-ease) both}
+ .assistant-prompts button{animation:assistant-rise 650ms 230ms var(--motion-ease) backwards}
+ .assistant-prompts button:nth-child(2){animation-delay:290ms}.assistant-prompts button:nth-child(3){animation-delay:350ms}
+ .assistant-thinking-dots i{animation:assistant-dot 1200ms ease-in-out infinite}.assistant-thinking-dots i:nth-child(2){animation-delay:150ms}.assistant-thinking-dots i:nth-child(3){animation-delay:300ms}
+ .assistant-is-thinking .assistant-symbol{animation:assistant-glow 2s ease-in-out infinite}
+}
+@keyframes assistant-arrive{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes assistant-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes assistant-dot{0%,65%,100%{opacity:.4;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+@keyframes assistant-glow{0%,100%{box-shadow:0 0 0 0 #78985800}50%{box-shadow:0 0 0 6px #78985818}}
+@media(max-width:600px){.assistant-thinking{padding:12px 18px;font-size:11px}}
+@media(prefers-reduced-motion:reduce){.booking-layout,.booking-layout *{animation:none!important;transition:none!important;scroll-behavior:auto!important}.booking-layout .btn:hover,.booking-layout .btn:active,.assistant-prompts button:hover,.assistant-prompts button:active,.assistant-prompts button:hover .assistant-prompt-icon{transform:none!important}}

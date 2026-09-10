@@ -1,6 +1,6 @@
 <?php
 $rows=requests();$title='Requisitions';$description='Every request, from the first step to the final mile.';
-if($page==='approvals'){$title='Approval inbox';$description='Review official travel and keep requests moving forward.';$rows=array_values(array_filter($rows,fn($r)=>is_role('Administrator')?in_array($r['status'],['Pending Supervisor','Pending Administrative Approval']):$r['status']===(is_role('Supervisor')?'Pending Supervisor':'Pending Administrative Approval')));}
+if($page==='approvals'){$title='Approval inbox';$description='Review official travel and keep requests moving forward.';$rows=array_values(array_filter($rows,fn($r)=>in_array($r['status'],['Pending Supervisor','Pending Administrative Approval'])));}
 if($page==='dispatch'){$title='Dispatch & returns';$description='Release approved vehicles and record every safe return.';$rows=array_values(array_filter($rows,fn($r)=>in_array($r['status'],['Approved','Dispatched','Returned','Completed'])));}
 page_heading($title,$description,new_button());
 $statuses=array_values(array_unique(array_column($rows,'status')));$offices=array_unique(array_column($rows,'office_name','office_id'));

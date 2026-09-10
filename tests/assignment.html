@@ -1,0 +1,32 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Assignment controls regression checks</title>
+<form>
+<select name="vehicle_id" data-assignment-resource><option value="">Select vehicle</option><option value="1">Available vehicle</option><option value="2" disabled data-overridable="true">Booked vehicle</option><option value="3" disabled data-overridable="false">Unavailable vehicle</option></select>
+<select name="driver_id" data-assignment-resource><option value="">Select driver</option><option value="1">Available driver</option></select>
+<button type="button" data-check-availability="1">Check availability</button><div id="availability-result" role="status"></div>
+<button type="button" data-enable-override>Override schedule conflict</button><div id="schedule-override" hidden><textarea name="override_reason" disabled></textarea></div>
+<button type="submit" name="action" value="approve" data-standard-approve>Approve</button><button type="submit" name="action" value="override_approve" data-override-approve hidden disabled>Override &amp; approve</button>
+</form><pre id="results">RUNNING</pre>
+<script>
+let offline=false;
+window.fetch=async url=>{if(offline)throw Error('Offline');const vehicle=new URL(url,location.href).searchParams.get('vehicle_id');return {ok:true,json:async()=>({available:vehicle==='1',overridable:vehicle==='2',message:vehicle==='1'?'Available':'Already scheduled'})};};
+</script><script src="../assets/js/assignment.js"></script><script>
+(async()=>{
+ const lines=[],form=document.querySelector('form'),v=form.elements.vehicle_id,d=form.elements.driver_id;
+ const approve=document.querySelector('[data-standard-approve]'),override=document.querySelector('[data-override-approve]'),toggle=document.querySelector('[data-enable-override]'),reason=form.elements.override_reason;
+ const check=(value,label)=>{if(!value)throw Error(label);lines.push('PASS: '+label);};
+ const settle=()=>new Promise(resolve=>setTimeout(resolve,20));
+ const select=async(vehicle)=>{v.value=vehicle;d.value='1';v.dispatchEvent(new Event('change'));await settle();};
+ try{
+  check(approve.disabled&&v.options[2].disabled,'Normal approval cannot select booked vehicles');
+  toggle.click();check(!v.options[2].disabled&&v.options[3].disabled,'Override unlocks only scheduling conflicts');
+  check(!reason.disabled&&!override.hidden,'Override exposes reason and separate approval button');
+  await select('2');check(approve.disabled&&!override.disabled,'Conflicting booking requires override button');
+  reason.value='Short';const event=new SubmitEvent('submit',{cancelable:true,submitter:override});form.dispatchEvent(event);check(event.defaultPrevented,'Short override reasons blocked');
+  toggle.click();await settle();check(!v.value&&v.options[2].disabled&&reason.disabled&&override.hidden,'Cancel override clears the conflicting selection');
+  await select('1');check(!approve.disabled&&override.disabled,'Available assignment allows normal approval');
+  offline=true;document.querySelector('[data-check-availability]').click();await settle();check(approve.disabled&&override.disabled,'Failed availability check keeps approval blocked');
+  offline=false;document.querySelector('[data-check-availability]').click();await settle();check(!approve.disabled,'Availability can be retried');
+  document.querySelector('#results').textContent=lines.join('\n')+'\nALL PASSED';
+ }catch(error){document.querySelector('#results').textContent=lines.join('\n')+'\nFAIL: '+error.message;}
+})();
+</script></html>

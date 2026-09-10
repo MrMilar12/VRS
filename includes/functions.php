@@ -9,10 +9,10 @@ function manage(): bool {return is_role('Administrator','Administrative Officer'
 function require_role(string ...$roles): void {if(!is_role(...$roles))throw new RuntimeException('You do not have permission to perform this action.');}
 function audit(string $action,string $detail=''): void {global $user;run('INSERT INTO audit_logs(user_id,action,details,created_at) VALUES(?,?,?,?)',[$user['id']??null,$action,$detail,date('Y-m-d H:i:s')]);}
 function csrf(): string {return '<input type="hidden" name="csrf" value="'.e($_SESSION['csrf']).'">';}
-function check_csrf(): void {if(!hash_equals($_SESSION['csrf'],(string)($_POST['csrf']??'')))throw new RuntimeException('Your session token expired. Refresh the page and try again.');}
+function check_csrf(): void {if(!is_string($_POST['csrf']??null)||!hash_equals($_SESSION['csrf'],$_POST['csrf']))throw new RuntimeException('Your session token expired. Refresh the page and try again.');}
 function redirect(string $url): never {header('Location: '.$url);exit;}
 function flash(string $message,string $type='success'): void {$_SESSION['flash']=[$message,$type];}
-function field(string $name,int $max=255,bool $required=true): string {$v=trim((string)($_POST[$name]??''));if(($required&&$v==='')||mb_strlen($v)>$max)throw new RuntimeException('Please provide a valid '.str_replace('_',' ',$name).'.');return $v;}
+function field(string $name,int $max=255,bool $required=true): string {$raw=$_POST[$name]??'';if(!is_string($raw))throw new RuntimeException('Please provide a valid '.str_replace('_',' ',$name).'.');$v=trim($raw);if(($required&&$v==='')||mb_strlen($v)>$max)throw new RuntimeException('Please provide a valid '.str_replace('_',' ',$name).'.');return $v;}
 function number(string $name,int $min=0): int {$v=filter_var($_POST[$name]??null,FILTER_VALIDATE_INT);if($v===false||$v<$min)throw new RuntimeException('Invalid '.str_replace('_',' ',$name).'.');return $v;}
 function datetime_value(string $name): string {$s=field($name,30);$d=DateTime::createFromFormat('Y-m-d\TH:i',$s);if(!$d||$d->format('Y-m-d\TH:i')!==$s)throw new RuntimeException('Enter a valid date and time.');return $d->format('Y-m-d H:i:s');}
 function badge(string $status): string {$class=match($status){'Approved','Reserved'=>'blue','Dispatched','In Use'=>'purple','Completed','Returned','Available','Active'=>'green','Rejected','Under Maintenance'=>'red','Pending Supervisor','Pending Administrative Approval','Submitted'=>'amber',default=>'gray'};return '<span class="badge '.$class.'"><i></i>'.e($status).'</span>';}
@@ -20,6 +20,24 @@ function shortdate(string $s,string $format='M j, Y'): string {return date($form
 function request_query(): string {return 'SELECT r.*,u.full_name requester_name,u.position,o.name office_name,o.code office_code,v.model,v.plate,d.full_name driver_name FROM requisitions r JOIN users u ON u.id=r.requester_id JOIN offices o ON o.id=r.office_id LEFT JOIN vehicles v ON v.id=r.vehicle_id LEFT JOIN drivers d ON d.id=r.driver_id';}
 function visible(array $r): bool {global $user;return is_role('Administrator','Administrative Officer','Dispatcher')||($user['role']==='Supervisor'&&(int)$r['office_id']===(int)$user['office_id'])||(int)$r['requester_id']===(int)$user['id'];}
 function requests(): array {global $user;$sql=request_query();$args=[];if(is_role('Requester')){$sql.=' WHERE r.requester_id=?';$args[]=$user['id'];}elseif(is_role('Supervisor')){$sql.=' WHERE r.office_id=?';$args[]=$user['office_id'];}return all($sql.' ORDER BY r.start_datetime DESC,r.id DESC',$args);}
+// Every calendar excludes unapproved requests, even those owned by the viewer.
+function calendar_requests(): array {
+ global $user;if(!$user)return [];
+ $sql=request_query()." WHERE r.status IN ('Approved','Dispatched','Returned','Completed')";
+ $args=[];
+ if(!is_role('Administrator')){$sql.=' AND r.requester_id=?';$args[]=$user['id'];}
+ return all($sql.' ORDER BY r.start_datetime DESC,r.id DESC',$args);
+}
+function calendar_resources(array $rows): array {
+ $resources=['vehicles'=>[],'drivers'=>[],'offices'=>[]];
+ foreach($rows as $r){
+  if($r['vehicle_id'])$resources['vehicles'][$r['vehicle_id']]=['id'=>$r['vehicle_id'],'model'=>$r['model'],'plate'=>$r['plate'],'type'=>$r['vehicle_type']];
+  if($r['driver_id'])$resources['drivers'][$r['driver_id']]=['id'=>$r['driver_id'],'full_name'=>$r['driver_name']];
+  $resources['offices'][$r['office_id']]=['id'=>$r['office_id'],'name'=>$r['office_name']];
+ }
+ foreach(['vehicles'=>'model','drivers'=>'full_name','offices'=>'name'] as $key=>$label){$resources[$key]=array_values($resources[$key]);usort($resources[$key],fn($a,$b)=>strcasecmp($a[$label]??'',$b[$label]??''));}
+ return $resources;
+}
 function get_request(int $id): array {$r=one(request_query().' WHERE r.id=?',[$id]);if(!$r||!visible($r))throw new RuntimeException('Request not found or access denied.');return $r;}
 function lock_transaction(): void {global $pdo;if($pdo->getAttribute(PDO::ATTR_DRIVER_NAME)==='sqlite')$pdo->exec('BEGIN IMMEDIATE');else $pdo->beginTransaction();}
 function finish_transaction(bool $success): void {global $pdo;if($pdo->getAttribute(PDO::ATTR_DRIVER_NAME)==='sqlite')$pdo->exec($success?'COMMIT':'ROLLBACK');elseif($pdo->inTransaction()){$success?$pdo->commit():$pdo->rollBack();}}
@@ -29,10 +47,23 @@ function conflicts(int $vehicle,int $driver,string $start,string $end,int $exclu
     // Locking reads observe the latest committed assignments after resource locks are acquired.
     $currentRead=$pdo->getAttribute(PDO::ATTR_DRIVER_NAME)==='mysql'&&$pdo->inTransaction()?' FOR UPDATE':'';
     $buffer=(int)setting('turnaround_minutes','30');$from=date('Y-m-d H:i:s',strtotime($start)-$buffer*60);$to=date('Y-m-d H:i:s',strtotime($end)+$buffer*60);
-    $found=all("SELECT reference,vehicle_id,driver_id FROM requisitions WHERE id<>? AND status IN ('Approved','Dispatched') AND (vehicle_id=? OR driver_id=?) AND ((start_datetime < ? AND end_datetime > ?) OR (status='Dispatched' AND end_datetime < ?))".$currentRead,[$exclude,$vehicle,$driver,$to,$from,date('Y-m-d H:i:s')]);
-    $messages=[];foreach($found as $r)$messages[]=$r['reference'].' has an overlapping '.((int)$r['vehicle_id']===$vehicle?'vehicle':'driver').' assignment.';
+    $found=all("SELECT reference,vehicle_id,driver_id,start_datetime,end_datetime FROM requisitions WHERE id<>? AND status IN ('Approved','Dispatched') AND (vehicle_id=? OR driver_id=?) AND ((start_datetime < ? AND end_datetime > ?) OR (status='Dispatched' AND end_datetime < ?))".$currentRead,[$exclude,$vehicle,$driver,$to,$from,date('Y-m-d H:i:s')]);
+    $messages=[];foreach($found as $r)$messages[]=$r['reference'].' has an overlapping '.((int)$r['vehicle_id']===$vehicle?'vehicle':'driver').' assignment ('.shortdate($r['start_datetime'],'M j, Y g:i A').' – '.shortdate($r['end_datetime'],'M j, Y g:i A').').';
     if(one('SELECT id FROM vehicle_blocks WHERE vehicle_id=? AND start_datetime < ? AND end_datetime > ?'.$currentRead,[$vehicle,$to,$from]))$messages[]='The vehicle has a maintenance block during this schedule.';
     return $messages;
+}
+function vehicle_assignment_issues(array $v,array $r): array {
+ $issues=[];
+ if(!in_array($v['status'],['Available','Reserved']))$issues[]='Vehicle is '.$v['status'].'.';
+ if($v['registration_expiry']<substr($r['end_datetime'],0,10))$issues[]='Vehicle registration expires before this trip ends.';
+ if(count(array_filter(preg_split('/[,\n]+/',$r['passengers'])))>(int)$v['capacity'])$issues[]='The passenger list exceeds this vehicle’s capacity.';
+ return $issues;
+}
+function driver_assignment_issues(array $d,array $r): array {
+ $issues=[];
+ if($d['status']!=='Available')$issues[]='Driver is unavailable.';
+ if($d['license_expiry']<substr($r['end_datetime'],0,10))$issues[]='Driver license expires before this trip ends.';
+ return $issues;
 }
 function notify_request(array $r,string $message): void {run('INSERT INTO notifications(user_id,message,requisition_id,created_at) VALUES(?,?,?,?)',[$r['requester_id'],$r['reference'].' · '.$message,$r['id'],date('Y-m-d H:i:s')]);}
 function icon(string $name,int $size=20): string {

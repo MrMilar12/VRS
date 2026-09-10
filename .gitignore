@@ -3,3 +3,4 @@
 /config/local.php
 /assets/uploads/*
 !/assets/uploads/.htaccess
+

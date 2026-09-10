@@ -18,4 +18,10 @@ verify((bool)conflicts(2,4,$day.' 09:00:00',$day.' 10:00:00'),'Maintenance overl
 $user=one('SELECT * FROM users WHERE id=3');verify(!visible(one('SELECT * FROM requisitions WHERE id=?',[$id])),'Requester cannot see another requester’s record');
 verify(e('<script>"&')==='&lt;script&gt;&quot;&amp;','HTML output escaped');
 $_POST=['start'=>'2026-02-30T10:00'];try{datetime_value('start');throw new Exception('Invalid date accepted');}catch(RuntimeException $e){echo "PASS: Invalid calendar date rejected\n";}
+$trip=one('SELECT * FROM requisitions WHERE id=?',[$id]);$vehicle=one('SELECT * FROM vehicles WHERE id=3');$driver=one('SELECT * FROM drivers WHERE id=5');
+verify(!vehicle_assignment_issues($vehicle,$trip)&&!driver_assignment_issues($driver,$trip),'Eligible vehicle and driver accepted');
+verify((bool)vehicle_assignment_issues(array_replace($vehicle,['registration_expiry'=>'2000-01-01']),$trip),'Expired registration is a non-overridable restriction');
+verify((bool)vehicle_assignment_issues(array_replace($vehicle,['capacity'=>0]),$trip),'Insufficient capacity is a non-overridable restriction');
+verify((bool)driver_assignment_issues(array_replace($driver,['license_expiry'=>'2000-01-01']),$trip),'Expired driver license is a non-overridable restriction');
+verify((bool)driver_assignment_issues(array_replace($driver,['status'=>'Inactive']),$trip),'Unavailable driver is a non-overridable restriction');
 echo "All domain checks passed.\n";
