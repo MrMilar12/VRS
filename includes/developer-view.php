@@ -1,14 +1,19 @@
-<?php
-page_heading('Developer center','Keep your workspace up to date with your GitHub repository.');
-?>
+<?php page_heading('Developer center','A fresh start for your workspace.'); ?>
+<link rel="stylesheet" href="assets/css/developer.css?v=<?=filemtime(__DIR__.'/../assets/css/developer.css')?>">
 <div class="developer-center" data-developer-center>
-<section class="panel"><div class="panel-heading"><div><h2>Software updates</h2><p><?=e($config['update_repository']??'MrMilar12/VRS')?> · <?=e($config['update_branch']??'main')?></p></div><button class="btn primary" type="button" data-update-check>Check for updates</button></div>
-<div class="form-body stack"><p class="developer-status" data-update-status role="status">Checking GitHub and preparing the patch…</p><p class="field-hint">Checks automatically every minute while this page is open. Updates install only when you choose Apply update.</p>
-<dl class="profile-details"><div><dt>Installed version</dt><dd data-update-current>—</dd></div><div><dt>Latest version</dt><dd data-update-latest>—</dd></div></dl>
-<p data-update-summary></p><p class="field-hint" data-update-checked></p><ul data-update-blockers class="developer-blockers"></ul>
-<details data-update-changes hidden><summary>Files in this update <span data-update-count></span></summary><ul data-update-files></ul></details>
-<form class="stack developer-update-form" data-update-form><?=csrf()?><label>Confirm administrator password<input type="password" name="password" autocomplete="current-password" required></label><p class="field-hint">The GitHub ZIP is downloaded and validated before patching. Applying backs up and replaces application files, including local code edits. Local configuration, databases, authenticator keys, and uploads are protected. Database migration scripts are not run automatically.</p><div class="button-row"><button class="btn primary" type="submit" data-update-apply disabled>Apply update</button><button class="btn" type="button" data-update-rollback hidden>Roll back previous update</button></div></form>
-</div></section>
-<section class="panel"><div class="panel-heading"><h2>Publishing an update</h2></div><div class="form-body stack"><p>Commit your changes and push them to the configured GitHub branch. This page will display the new version and the files it changes.</p><p>Before installation, the updater validates archive paths and PHP syntax. A file backup is saved in storage so the previous code can be restored.</p><p class="field-hint">The server account needs PHP cURL, ZipArchive, PHP CLI, GitHub access, and write permission to application files and storage. Git is not required. Keep environment-specific settings in config/local.php.</p></div></section>
+<section class="update-card">
+ <div class="update-topline"><span class="update-eyebrow">WORKSPACE SOFTWARE</span><button class="btn" type="button" data-update-check>Check for updates</button></div>
+ <div class="update-hero"><div class="update-symbol" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M24 32V12m-8 8 8-8 8 8M12 30v7h24v-7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h2>Better with every update.</h2><p class="developer-status" data-update-status role="status">Checking for a new version…</p><p class="update-description">Your workspace, kept up to date. You choose when to install.</p></div>
+ <div class="update-versions"><div><span>Installed version</span><strong data-update-current>—</strong></div><span class="update-version-divider" aria-hidden="true">/</span><div><span>Latest version</span><strong data-update-latest>—</strong></div></div>
+ <p class="update-release" data-update-summary></p>
+ <div class="update-progress"><div class="update-progress-heading"><span data-update-phase>Ready when you are</span><strong data-update-percent>0%</strong></div><div class="update-track" data-update-progress role="progressbar" aria-label="Update steps completed" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-update-fill></span></div><div class="update-steps"><span>Download & validate</span><span>Review & install</span><span>Complete</span></div><p class="field-hint">Progress reflects completed steps.</p></div>
+ <ul data-update-blockers class="developer-blockers"></ul>
+ <div class="update-actions"><button class="btn primary" type="button" data-update-download disabled>Update now</button><p data-update-checked class="field-hint"></p></div>
+ <details data-update-changes hidden><summary>Included in this update <span data-update-count></span></summary><ul data-update-files></ul></details>
+ <form class="stack developer-update-form" data-update-form><?=csrf()?>
+  <div data-update-confirm hidden><label>Administrator password<input type="password" name="password" autocomplete="current-password" required></label><p class="field-hint">Review the patch before installing. Your existing code is backed up; local settings, databases, and uploads are preserved.</p><button class="btn primary" type="submit" data-update-apply disabled>Install update</button></div>
+  <button class="btn" type="button" data-update-rollback hidden>Restore previous version</button>
+ </form>
+</section>
 </div>
 <script src="assets/js/developer.js?v=<?=filemtime(__DIR__.'/../assets/js/developer.js')?>" defer></script>

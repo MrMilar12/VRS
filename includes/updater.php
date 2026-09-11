@@ -46,9 +46,14 @@ final class VrsUpdater {
   $p=proc_open([$this->config['update_php_binary']??PHP_BINDIR.'/php','-n','-l',$file],[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
   if(!is_resource($p))throw new RuntimeException('Cannot start PHP validation.');fclose($pipes[0]);stream_get_contents($pipes[1]);stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);if(proc_close($p)!==0)throw new RuntimeException('PHP validation failed for '.$name.'. No code was replaced.');
  }
+ private function discardStage(string $base): void {
+  if(!preg_match('/^update-stage-[a-f0-9]{16}$/D',$base)||!is_dir($this->directory.'/'.$base))return;
+  $items=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($this->directory.'/'.$base,FilesystemIterator::SKIP_DOTS),RecursiveIteratorIterator::CHILD_FIRST);
+  foreach($items as $item){if($item->isDir()&&!$item->isLink())rmdir($item->getPathname());else unlink($item->getPathname());}rmdir($this->directory.'/'.$base);
+ }
  private function stage(string $target,string $archive): array {
   if(!class_exists('ZipArchive'))throw new RuntimeException('Enable PHP ZipArchive for code updates.');
-  $base='update-stage-'.bin2hex(random_bytes(8));mkdir($this->directory.'/'.$base,0700);$zipPath=$this->directory.'/'.$base.'/source.zip';file_put_contents($zipPath,$archive);$zip=new ZipArchive();
+  $base='update-stage-'.bin2hex(random_bytes(8));mkdir($this->directory.'/'.$base,0700);try{$zipPath=$this->directory.'/'.$base.'/source.zip';file_put_contents($zipPath,$archive);$zip=new ZipArchive();
   if($zip->open($zipPath)!==true)throw new RuntimeException('GitHub did not return a valid ZIP archive.');$files=[];$seen=[];$total=0;$prefix=null;
   try{if($zip->numFiles>10000)throw new RuntimeException('Archive contains too many files.');
    for($i=0;$i<$zip->numFiles;$i++){$stat=$zip->statIndex($i);$name=$stat['name'];$parts=explode('/',$name,2);if(count($parts)!==2||$parts[0]===''||$parts[0]==='..')throw new RuntimeException('Invalid archive root.');$prefix??=$parts[0];if($prefix!==$parts[0])throw new RuntimeException('Archive has multiple roots.');$path=rtrim($parts[1],'/');if($path==='')continue;
@@ -63,17 +68,23 @@ final class VrsUpdater {
   foreach($files as $path=>$hash){$old=$this->hash($path);if($old!==$hash){$before[$path]=$old;$changes[$path]=$hash;}}
   // Remove only files recorded by a previous archive deployment; preserve unmanaged files.
   foreach(($previous['files']??[]) as $path=>$hash)if(!isset($files[$path])&&$this->allowed($path)&&$this->hash($path)!==null){$before[$path]=$this->hash($path);$changes[$path]=null;}
-  $state=['target'=>$target,'current'=>$this->current(),'base'=>$base,'files'=>$files,'before'=>$before,'changes'=>$changes,'created'=>time()];$this->save('update-stage.json',$state);return $state;
+  $state=['target'=>$target,'current'=>$this->current(),'base'=>$base,'files'=>$files,'before'=>$before,'changes'=>$changes,'created'=>time()];$previousStage=$this->read('update-stage.json')['base']??'';$this->save('update-stage.json',$state);$this->discardStage($previousStage);return $state;}catch(Throwable $e){$this->discardStage($base);throw $e;}
  }
+ private function stale(array $stage): bool {foreach(($stage['before']??[]) as $path=>$hash)if($this->hash($path)!==$hash)return true;return false;}
  private function permissions(array $stage): array {
   foreach($stage['changes'] as $path=>$hash){$full=$this->local($path);$parent=dirname($full);while(!is_dir($parent))$parent=dirname($parent);if(!is_writable($parent)||(file_exists($full)&&!is_writable($full)))return ['XAMPP needs write access to application code before patching ('.$path.'). Git metadata does not need write access.'];}return [];
  }
- public function check(): array {
+ public function check(string $downloadTarget=''): array {
   $lock=$this->lock();try{[$repo,$branch]=$this->identity();$cache=$this->read('update-check.json');
    if(($cache['checked_epoch']??0)<time()-60||($cache['repository']??'')!==$repo||($cache['branch']??'')!==$branch){$commit=json_decode($this->download('https://api.github.com/repos/'.$repo.'/commits/'.rawurlencode($branch),2000000),true);$target=$commit['sha']??'';if(!preg_match('/^[a-f0-9]{40}$/D',$target))throw new RuntimeException('Invalid GitHub version.');$cache=['repository'=>$repo,'branch'=>$branch,'latest'=>$target,'summary'=>explode("\n",$commit['commit']['message']??'GitHub update')[0],'checked_epoch'=>time(),'checked_at'=>date('Y-m-d H:i:s')];$this->save('update-check.json',$cache);}
    $current=$this->current();$stage=$this->read('update-stage.json');$available=$current!==$cache['latest'];$blocked=[];$changes=[];
-   if($available){if(($stage['target']??'')!==$cache['latest']||($stage['current']??'')!==$current)$stage=$this->stage($cache['latest'],$this->download('https://codeload.github.com/'.$repo.'/zip/'.$cache['latest'],50000000));$blocked=$this->permissions($stage);foreach($stage['changes'] as $path=>$hash)$changes[]=($hash===null?'D':($stage['before'][$path]===null?'A':'M'))."\t".$path;}
-   $deployment=$this->read('update-deployment.json');return array_merge($cache,['current'=>$current,'available'=>$available,'blocked'=>$blocked,'can_apply'=>$available&&!$blocked,'changes'=>array_slice($changes,0,300),'change_count'=>count($changes),'rollback'=>($deployment['installed']??'')===$current?($deployment['previous']??null):null]);
+   $prepared=$available&&($stage['target']??'')===$cache['latest']&&($stage['current']??'')===$current&&!$this->stale($stage);
+   if($downloadTarget!==''){
+    if(!$available||$downloadTarget!==$cache['latest'])throw new RuntimeException('The available version changed. Check for updates again before downloading.');
+    if(!$prepared)$stage=$this->stage($cache['latest'],$this->download('https://codeload.github.com/'.$repo.'/zip/'.$cache['latest'],50000000));$prepared=true;
+   }
+   if($prepared){$blocked=$this->permissions($stage);foreach($stage['changes'] as $path=>$hash)$changes[]=($hash===null?'D':($stage['before'][$path]===null?'A':'M'))."\t".$path;}
+   $deployment=$this->read('update-deployment.json');return array_merge($cache,['current'=>$current,'available'=>$available,'prepared'=>$prepared,'blocked'=>$blocked,'can_apply'=>$prepared&&!$blocked,'changes'=>array_slice($changes,0,300),'change_count'=>count($changes),'rollback'=>($deployment['installed']??'')===$current?($deployment['previous']??null):null]);
   }finally{flock($lock,LOCK_UN);fclose($lock);}
  }
  public function apply(string $expectedHead,string $target,bool $rollback=false): array {
@@ -82,7 +93,7 @@ final class VrsUpdater {
    if($rollback){$deployment=$this->read('update-deployment.json');if(($deployment['installed']??'')!==$expectedHead||($deployment['previous']??'')!==$target)throw new RuntimeException('Rollback is no longer available.');$stage=$this->read($deployment['backup'].'/manifest.json');$source=$deployment['backup'];}
    else{$stage=$this->read('update-stage.json');if(($stage['target']??'')!==$target||($stage['current']??'')!==$expectedHead)throw new RuntimeException('Check for updates to download and preview this version first.');$source=$stage['base'];}
    if($errors=$this->permissions($stage))throw new RuntimeException($errors[0]);
-   foreach($stage['changes'] as $path=>$hash){if($this->hash($path)!==$stage['before'][$path])throw new RuntimeException('Local files changed since the preview. Clear storage/update-stage.json and check again.');if($hash!==null&&hash_file('sha256',$this->directory.'/'.$source.'/files/'.$path)!==$hash)throw new RuntimeException('Downloaded file verification failed.');}
+   foreach($stage['changes'] as $path=>$hash){if($this->hash($path)!==$stage['before'][$path])throw new RuntimeException('Local files changed since the preview. Check for updates again to refresh the preview.');if($hash!==null&&hash_file('sha256',$this->directory.'/'.$source.'/files/'.$path)!==$hash)throw new RuntimeException('Downloaded file verification failed.');}
    $backup='update-backup-'.date('Ymd-His').'-'.bin2hex(random_bytes(4));$inverse=['changes'=>$stage['before'],'before'=>$stage['changes']];
    foreach($stage['before'] as $path=>$hash)if($hash!==null)$this->write($this->directory.'/'.$backup.'/files/'.$path,file_get_contents($this->local($path)));
    $this->save($backup.'/manifest.json',$inverse);$oldInstalled=$this->read('update-installed.json');$this->save($backup.'/installed.json',$oldInstalled);
@@ -91,7 +102,7 @@ final class VrsUpdater {
     $installed=$rollback?$this->read($source.'/installed.json'):['commit'=>$target,'files'=>$stage['files']];$installed['commit']=$target;$this->save('update-installed.json',$installed);
     $this->save('update-deployment.json',['installed'=>$target,'previous'=>$expectedHead,'backup'=>$backup]);
    }catch(Throwable $e){try{foreach(array_reverse($done) as $path){if($stage['before'][$path]===null){if(is_file($this->local($path)))unlink($this->local($path));}else $this->write($this->local($path),file_get_contents($this->directory.'/'.$backup.'/files/'.$path));}$this->save('update-installed.json',$oldInstalled);}catch(Throwable $restore){$maintenance=false;throw new RuntimeException('Patch recovery needs attention. Backup: storage/'.$backup);}throw new RuntimeException('Patch failed; previous files restored. '.$e->getMessage());}
-   @unlink($this->directory.'/update-stage.json');if(function_exists('opcache_reset'))opcache_reset();return ['success'=>true,'current'=>$target,'previous'=>$expectedHead,'message'=>$rollback?'Previous files restored.':'GitHub archive downloaded, backed up, and installed successfully.'];
+   @unlink($this->directory.'/update-stage.json');if(!$rollback)$this->discardStage($source);if(function_exists('opcache_reset'))opcache_reset();return ['success'=>true,'current'=>$target,'previous'=>$expectedHead,'message'=>$rollback?'Previous files restored.':'GitHub archive downloaded, backed up, and installed successfully.'];
   }finally{if($maintenance)@unlink($this->directory.'/update-maintenance.json');flock($lock,LOCK_UN);fclose($lock);}
  }
 }

@@ -9,7 +9,11 @@ try{
  $files=[];foreach(['index.php','api.php','actions.php','includes/bootstrap.php','includes/updater.php','includes/developer-view.php'] as $p){$files[$p]="<?php // new\n";if(!is_dir(dirname($root.'/'.$p)))mkdir(dirname($root.'/'.$p),0755,true);file_put_contents($root.'/'.$p,"<?php // local edit\n");}$files['assets/js/developer.js']='// new';$files['added.txt']='added';
  mkdir($root.'/config');mkdir($root.'/assets/uploads',0755,true);file_put_contents($root.'/config/local.php','SECRET');file_put_contents($root.'/storage/db.sqlite','DATABASE');file_put_contents($root.'/assets/uploads/photo','PHOTO');
  $files['config/local.php']='BAD';$files['storage/db.sqlite']='BAD';$files['assets/uploads/photo']='BAD';$files['.git/config']='BAD';
- $u=new VrsUpdater($root,['update_php_binary'=>PHP_BINARY]);$stage=new ReflectionMethod($u,'stage');$s=$stage->invoke($u,$new,archive_test($files));expect(count($s['changes'])===9,'Preview includes additions, modifications and tracked deletion');
+ $u=new VrsUpdater($root,['update_php_binary'=>PHP_BINARY]);file_put_contents($root.'/storage/update-check.json',json_encode(['repository'=>'MrMilar12/VRS','branch'=>'main','latest'=>$new,'summary'=>'Fixture update','checked_epoch'=>time(),'checked_at'=>date('Y-m-d H:i:s')]));
+ $status=$u->check();expect($status['available']&&!$status['prepared']&&!$status['can_apply']&&!is_file($root.'/storage/update-stage.json'),'Automatic check only reports availability without downloading or installing');
+ reject(fn()=>$u->apply($old,$new),'download and preview');
+ reject(fn()=>$u->check(str_repeat('d',40)),'available version changed');
+ $stage=new ReflectionMethod($u,'stage');$s=$stage->invoke($u,$new,archive_test($files));expect(count($s['changes'])===9,'Preview includes additions, modifications and tracked deletion');
  reject(fn()=>$u->apply(str_repeat('c',40),$new),'installed version changed');
  $lock=fopen($root.'/storage/update.lock','c');flock($lock,LOCK_EX);reject(fn()=>$u->apply($old,$new),'Another update');flock($lock,LOCK_UN);fclose($lock);
  file_put_contents($root.'/index.php','changed after preview');reject(fn()=>$u->apply($old,$new),'Local files changed');file_put_contents($root.'/index.php',"<?php // local edit\n");

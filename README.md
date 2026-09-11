@@ -164,7 +164,7 @@ Availability is computed by PHP from current records, scheduled trips, turnaroun
 
 ### Developer center and GitHub updates
 
-Administrators can open **Developer center**. It checks the configured GitHub branch every 60 seconds while visible. When a new commit is found, it downloads that exact commit as a ZIP, validates its files and PHP syntax, and shows the patch preview. Installation requires an administrator password and confirmation.
+Administrators can open **Developer center**. It checks the configured GitHub branch every 60 seconds while visible. Automatic checks only retrieve version metadata. Choose **Download patch** to download the selected commit as a ZIP, validate its files and PHP syntax, and show the patch preview. No archive download or code installation happens during polling. Installation requires an administrator password and confirmation.
 
 Git is not required. The updater never writes `.git`. Configure `update_repository`, `update_branch`, and `update_php_binary` in `config/local.php`; defaults are `MrMilar12/VRS`, `main`, and the server PHP CLI. PHP needs cURL, ZipArchive, and proc_open. Private repositories can use a server environment variable `VRS_GITHUB_TOKEN`. The server needs HTTPS access to api.github.com and codeload.github.com.
 
