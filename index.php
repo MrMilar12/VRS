@@ -6,6 +6,7 @@ $page=$_GET['page']??'dashboard';
 $pages=['developer'=>'Developer center','assistant'=>'AI booking assistant','profile'=>'My profile','dashboard'=>'Overview','calendar'=>'Vehicle calendar','requisitions'=>'Requisitions','create'=>'New requisition','request'=>'Requisition details','approvals'=>'Approvals','dispatch'=>'Dispatch & returns','vehicles'=>'Vehicles','drivers'=>'Drivers','offices'=>'Offices','users'=>'Users & roles','maintenance'=>'Maintenance','reports'=>'Reports & insights','audit'=>'Audit trail','settings'=>'Settings','notifications'=>'Notifications'];
 if(!is_string($page)||!isset($pages[$page])){http_response_code(404);$page='notfound';}
 try{
+ foreach(['id','edit'] as $parameter)if(isset($_GET[$parameter]))$_GET[$parameter]=record_link_id($_GET[$parameter],$page.':'.$parameter);
  if(in_array($page,['vehicles','drivers','maintenance','reports']))require_role('Administrator','Administrative Officer');
  if(in_array($page,['offices','users','audit','settings','developer']))require_role('Administrator');
  if($page==='approvals')require_role('Administrator');

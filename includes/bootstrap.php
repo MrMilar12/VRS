@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/transport-security.php';
+secure_transport();
 // Fail briefly before loading application files while a deployment replaces code.
 $updateMarker=__DIR__.'/../storage/update-maintenance.json';
 if((@filemtime($updateMarker)?:0)>time()-300){http_response_code(503);header('Retry-After: 30');exit('A software update is being installed. Please try again shortly.');}
@@ -12,12 +14,13 @@ session_set_cookie_params(['httponly'=>true,'samesite'=>'Lax','secure'=>!empty($
 session_start();
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: SAMEORIGIN');
-header('Referrer-Policy: same-origin');
+header('Referrer-Policy: no-referrer');
 header('Cache-Control: no-store');
 require_once __DIR__.'/database.php';
 require_once __DIR__.'/functions.php';
 require_once __DIR__.'/records.php';
 require_once __DIR__.'/auth.php';
+require_once __DIR__.'/url-security.php';
 try {
     $pdo = new PDO($config['demo'] ? 'sqlite:'.__DIR__.'/../storage/demo.sqlite' : $config['dsn'], $config['username'], $config['password'], [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
     auth_schema($pdo);
@@ -40,5 +43,3 @@ if (!empty($_SESSION['user_id'])) {
  $valid=auth_session_valid($account,$_SESSION,null,$account&&auth_is_disabled((int)$account['id']));
  if($valid){$user=$account;$_SESSION['auth_seen']=time();}else{unset($_SESSION['user_id'],$_SESSION['auth_level'],$_SESSION['auth_credential']);session_regenerate_id(true);$_SESSION['csrf']=bin2hex(random_bytes(32));}
 }
-// Remote operational authentication must use TLS. Proxy headers are not trusted.
-if(!$config['demo']&&(!isset($_SERVER['HTTPS'])||$_SERVER['HTTPS']===''||$_SERVER['HTTPS']==='off')&&!in_array($_SERVER['REMOTE_ADDR']??'127.0.0.1',['127.0.0.1','::1'])){http_response_code(403);exit('HTTPS is required to access this workspace.');}

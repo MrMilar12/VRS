@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/includes/transport-security.php';
+secure_transport();
 require __DIR__.'/includes/installer.php';
 $defaults=require __DIR__.'/config/system.php';
 date_default_timezone_set($defaults['timezone']);

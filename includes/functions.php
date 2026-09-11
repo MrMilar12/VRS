@@ -10,7 +10,7 @@ function require_role(string ...$roles): void {if(!is_role(...$roles))throw new 
 function audit(string $action,string $detail=''): void {global $user;run('INSERT INTO audit_logs(user_id,action,details,created_at) VALUES(?,?,?,?)',[$user['id']??null,$action,$detail,date('Y-m-d H:i:s')]);}
 function csrf(): string {return '<input type="hidden" name="csrf" value="'.e($_SESSION['csrf']).'">';}
 function check_csrf(): void {if(!is_string($_POST['csrf']??null)||!hash_equals($_SESSION['csrf'],$_POST['csrf']))throw new RuntimeException('Your session token expired. Refresh the page and try again.');}
-function redirect(string $url): never {header('Location: '.$url);exit;}
+function redirect(string $url): never {header('Location: '.secure_record_url($url));exit;}
 function flash(string $message,string $type='success'): void {$_SESSION['flash']=[$message,$type];}
 function field(string $name,int $max=255,bool $required=true): string {$raw=$_POST[$name]??'';if(!is_string($raw))throw new RuntimeException('Please provide a valid '.str_replace('_',' ',$name).'.');$v=trim($raw);if(($required&&$v==='')||mb_strlen($v)>$max)throw new RuntimeException('Please provide a valid '.str_replace('_',' ',$name).'.');return $v;}
 function number(string $name,int $min=0): int {$v=filter_var($_POST[$name]??null,FILTER_VALIDATE_INT);if($v===false||$v<$min)throw new RuntimeException('Invalid '.str_replace('_',' ',$name).'.');return $v;}

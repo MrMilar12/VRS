@@ -3,3 +3,17 @@ DirectoryIndex index.php
 <FilesMatch "^(README\.md|.*\.(sql|sqlite|sqlite-journal|py|log))$">
 Require all denied
 </FilesMatch>
+
+# Block hidden configuration, editor backups, and repository metadata.
+<FilesMatch "(^\.|\.(?:bak|old|orig|save|swp|env|ini|zip|tar|gz)$|~$)">
+Require all denied
+</FilesMatch>
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule (^|/)\.(?!well-known/acme-challenge/) - [F,L]
+# Remote traffic must use TLS, including static assets. Local development stays available.
+RewriteCond %{HTTPS} !=on
+RewriteCond %{REMOTE_ADDR} !^127\.0\.0\.1$
+RewriteCond %{REMOTE_ADDR} !^::1$
+RewriteRule ^ - [F,L]
+</IfModule>

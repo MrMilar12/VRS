@@ -9,7 +9,7 @@ $passengerRows=max(6,count($passengerNames));
 <script src="../assets/js/vendor/qrcodegen.js" defer></script>
 <script src="../assets/js/slip-qr.js?v=<?=filemtime(__DIR__.'/../assets/js/slip-qr.js')?>" defer></script>
 </head><body>
-<div class="print-toolbar"><button type="button" data-print-slip disabled>Preparing QR code…</button><a href="../index.php?page=request&id=<?=(int)$r['id']?>">Back to requisition</a><span data-qr-status role="status"></span><noscript>Enable JavaScript to generate the slip QR code before printing.</noscript></div>
+<div class="print-toolbar"><button type="button" data-print-slip disabled>Preparing QR code…</button><a href="<?=e(secure_record_url('../index.php?page=request&id='.$r['id']))?>">Back to requisition</a><span data-qr-status role="status"></span><noscript>Enable JavaScript to generate the slip QR code before printing.</noscript></div>
 <main class="vehicle-slip">
 <header class="slip-header"><h1>Requisition Slip for Vehicle Use</h1><p>Date of Request: <span class="date-value"><?=shortdate($r['created_at'],'F j, Y')?></span></p>
 <figure class="slip-code"><div data-slip-qr="<?=e($r['reference'])?>"></div><figcaption><?=e($r['reference'])?></figcaption></figure></header>
