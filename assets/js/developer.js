@@ -10,7 +10,7 @@
   find('changes').hidden=!data.change_count;find('count').textContent='('+data.change_count+')';const files=find('files');files.replaceChildren();for(const path of data.changes){const li=document.createElement('li');li.textContent=path;files.append(li);}if(data.change_count>data.changes.length){const li=document.createElement('li');li.textContent='Preview limited to the first '+data.changes.length+' files.';files.append(li);}
   rollback.hidden=!data.rollback;pending(false);
  }
- async function refresh(){if(busy)return;pending(true);try{render(await request({mode:'check'}));}catch(error){state=null;status.textContent=error.message+' Update status is unavailable.';}finally{pending(false);}}
+ async function refresh(){if(busy)return;pending(true);status.textContent='Checking GitHub and downloading the patch…';try{render(await request({mode:'check'}));}catch(error){state=null;status.textContent=error.message+' Update status is unavailable.';}finally{pending(false);}}
  async function install(mode){if(busy||!state||!form.reportValidity())return;const target=mode==='rollback'?state.rollback:state.latest;if(!target)return;
   if(!confirm((mode==='rollback'?'Restore previous code version ':'Install version ')+target.slice(0,12)+'? The workspace will briefly pause during replacement.'))return;
   const password=form.elements.password.value;pending(true);status.textContent='Validating and '+(mode==='rollback'?'restoring':'installing')+' code…';

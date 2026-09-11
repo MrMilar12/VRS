@@ -1,90 +1,97 @@
 <?php
-/** Git deployments are restricted to one configured GitHub repository and branch. */
+/** Download pinned GitHub archives. Git metadata and runtime data are never patched. */
 final class VrsUpdater {
- private string $root;private array $config;private string $directory;
- public function __construct(string $root,array $config){$this->root=rtrim($root,'/');$this->config=$config;$this->directory=$this->root.'/storage';}
- private function command(array $args,int $timeout=30): array {
-  if(!function_exists('proc_open'))throw new RuntimeException('PHP proc_open is disabled. Enable it for developer updates.');
-  $pipes=[];$process=proc_open($args,[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes,$this->root,array_replace(getenv(),['GIT_TERMINAL_PROMPT'=>'0','GIT_OPTIONAL_LOCKS'=>'0','GCM_INTERACTIVE'=>'never']));
-  if(!is_resource($process))throw new RuntimeException('Unable to start the update command. Check server permissions.');
-  fclose($pipes[0]);stream_set_blocking($pipes[1],false);stream_set_blocking($pipes[2],false);$out='';$err='';$start=microtime(true);$exit=-1;
-  try{do{$out.=stream_get_contents($pipes[1]);$err.=stream_get_contents($pipes[2]);$status=proc_get_status($process);if(!$status['running']){$exit=$status['exitcode'];break;}if(strlen($out)+strlen($err)>8000000||microtime(true)-$start>$timeout){proc_terminate($process,9);throw new RuntimeException('Update command exceeded its limit. Check connectivity and server resources.');}usleep(20000);}while(true);
-   $out.=stream_get_contents($pipes[1]);$err.=stream_get_contents($pipes[2]);
-  }finally{fclose($pipes[1]);fclose($pipes[2]);proc_close($process);}
-  return ['code'=>$exit,'out'=>$out,'err'=>$err];
+ private string $root; private string $directory; private array $config;
+ public function __construct(string $root,array $config){$this->root=rtrim($root,'/');$this->directory=$this->root.'/storage';$this->config=$config;}
+ private function read(string $name): array {return json_decode(@file_get_contents($this->directory.'/'.$name)?:'[]',true)?:[];}
+ private function save(string $name,array $value): void {$this->write($this->directory.'/'.$name,json_encode($value,JSON_THROW_ON_ERROR));}
+ private function write(string $path,string $data): void {
+  $dir=dirname($path);if(!is_dir($dir)&&!mkdir($dir,0755,true))throw new RuntimeException('Cannot create update directory.');
+  $temp=tempnam($dir,'.patch-');if($temp===false)throw new RuntimeException('Update directory is not writable.');
+  try{if(file_put_contents($temp,$data)!==strlen($data))throw new RuntimeException('Cannot write complete patch file.');chmod($temp,is_file($path)?(fileperms($path)&0777):0644);if(!rename($temp,$path))throw new RuntimeException('Cannot replace '.basename($path).'. Check application file permissions.');}finally{if(is_file($temp))unlink($temp);}
  }
- private function git(array $args,bool $required=true): string {
-  $r=$this->command([$this->config['update_git_binary']??'git','-c','core.hooksPath=/dev/null','-c','protocol.ext.allow=never','-c','protocol.file.allow=never',...$args],60);
-  if($required&&$r['code']!==0)throw new RuntimeException('Git could not complete '.($args[0]??'the command').'. Check repository access, Git ownership, and filesystem permissions.');
-  return $required?rtrim($r['out'],"\r\n"):($r['code']===0?'yes':'no');
- }
- private function save(string $name,array $data): void {
-  $temporary=tempnam($this->directory,'update-');if($temporary===false)throw new RuntimeException('Update storage is not writable.');
-  try{if(file_put_contents($temporary,json_encode($data,JSON_THROW_ON_ERROR),LOCK_EX)===false||!rename($temporary,$this->directory.'/'.$name))throw new RuntimeException('Unable to save update state.');}finally{if(is_file($temporary))unlink($temporary);}
- }
- private function read(string $name): array {$data=@file_get_contents($this->directory.'/'.$name);return $data===false?[]:(json_decode($data,true)?:[]);}
- private function lock(){if(!is_dir($this->directory)||!is_writable($this->directory))throw new RuntimeException('The storage directory must be writable.');$lock=fopen($this->directory.'/update.lock','c');if(!$lock||!flock($lock,LOCK_EX|LOCK_NB)){if(is_resource($lock))fclose($lock);throw new RuntimeException('Another update operation is running. Try again shortly.');}return $lock;}
+ private function lock(){ $lock=@fopen($this->directory.'/update.lock','c');if(!$lock||!flock($lock,LOCK_EX|LOCK_NB)){if(is_resource($lock))fclose($lock);throw new RuntimeException('Another update operation is running or storage is not writable.');}return $lock; }
  private function identity(): array {
   $repo=$this->config['update_repository']??'MrMilar12/VRS';$branch=$this->config['update_branch']??'main';
-  if(!preg_match('~^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$~D',$repo)||!preg_match('~^[A-Za-z0-9][A-Za-z0-9._/-]*$~D',$branch)||str_contains($branch,'..'))throw new RuntimeException('Invalid update repository or branch.');
-  if(realpath($this->git(['rev-parse','--show-toplevel']))!==realpath($this->root))throw new RuntimeException('VRS must be installed at the root of its Git checkout.');
-  $remote=$this->git(['remote','get-url','origin']);
-  if(!in_array($remote,['https://github.com/'.$repo.'.git','https://github.com/'.$repo,'git@github.com:'.$repo.'.git']))throw new RuntimeException('The origin remote does not match the configured GitHub repository.');
-  return [$repo,$branch];
+  if(!preg_match('~^[A-Za-z0-9_-][A-Za-z0-9_.-]*/[A-Za-z0-9_-][A-Za-z0-9_.-]*$~D',$repo)||!preg_match('~^[A-Za-z0-9][A-Za-z0-9._/-]*$~D',$branch)||str_contains($branch,'..'))throw new RuntimeException('Invalid update repository or branch.');return [$repo,$branch];
  }
- private function protectedPath(string $path): bool {
-  if(in_array($path,['storage/.htaccess','assets/uploads/.htaccess']))return false;
-  return in_array($path,['storage','assets/uploads'])||$path==='config/local.php'||$path==='.env'||str_starts_with($path,'.env.')||str_starts_with($path,'storage/')||str_starts_with($path,'assets/uploads/');
+ private function download(string $url,int $limit): string {
+  if(!function_exists('curl_init'))throw new RuntimeException('Enable PHP cURL for GitHub downloads.');
+  $body='';$curl=curl_init($url);$headers=['Accept: application/vnd.github+json','User-Agent: VRS-Updater'];
+  $token=getenv('VRS_GITHUB_TOKEN');if($token)$headers[]='Authorization: Bearer '.$token;
+  curl_setopt_array($curl,[CURLOPT_HTTPHEADER=>$headers,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_CONNECTTIMEOUT=>15,CURLOPT_TIMEOUT=>90,CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS,CURLOPT_WRITEFUNCTION=>static function($ch,$chunk)use(&$body,$limit){if(strlen($body)+strlen($chunk)>$limit)return 0;$body.=$chunk;return strlen($chunk);}]);
+  $ok=curl_exec($curl);$code=curl_getinfo($curl,CURLINFO_RESPONSE_CODE);curl_close($curl);
+  if($ok===false||$code!==200)throw new RuntimeException('GitHub download failed (HTTP '.$code.'). Check connectivity, repository visibility, and VRS_GITHUB_TOKEN for private repositories.');return $body;
  }
- private function targetSafe(string $target,bool $lint): void {
-  $tree=$this->git(['ls-tree','-rz',$target]);$names=[];
-  foreach(explode("\0",$tree) as $entry){if($entry==='')continue;[$meta,$name]=explode("\t",$entry,2);$names[]=$name;if($this->protectedPath($name))throw new RuntimeException('The update tracks a protected runtime file: '.$name.'. Remove it from Git before updating.');if(str_starts_with($meta,'120000')||str_starts_with($meta,'160000'))throw new RuntimeException('Updates containing symlinks or submodules require manual deployment.');}
-  foreach(['index.php','api.php','actions.php','includes/bootstrap.php','includes/updater.php','includes/developer-view.php','assets/js/developer.js'] as $required)if(!in_array($required,$names))throw new RuntimeException('This version is missing an updater or application file. Publish the developer page before using web updates.');
-  if(!$lint)return;
-  foreach($names as $name)if(str_ends_with($name,'.php')){
-   $source=$this->git(['show',$target.':'.$name]);$file=tempnam($this->directory,'lint-');if($file===false)throw new RuntimeException('Unable to stage PHP validation.');
-   try{file_put_contents($file,$source);$check=$this->command([$this->config['update_php_binary']??PHP_BINDIR.'/php','-l',$file]);if($check['code']!==0)throw new RuntimeException('PHP validation failed for '.$name.'. Update was not installed.');}finally{unlink($file);}
-  }
+ private function current(): string {
+  $installed=$this->read('update-installed.json')['commit']??'';if(preg_match('/^[a-f0-9]{40}$/D',$installed))return $installed;
+  // Bootstrap an existing checkout using read-only metadata; Git is not required.
+  $head=trim(@file_get_contents($this->root.'/.git/HEAD')?:'');
+  if(str_starts_with($head,'ref: refs/')){$ref=substr($head,5);if(!str_contains($ref,'..')){$head=trim(@file_get_contents($this->root.'/.git/'.$ref)?:'');if(!$head)foreach(explode("\n",@file_get_contents($this->root.'/.git/packed-refs')?:'') as $line)if(str_ends_with($line,' '.$ref))$head=substr($line,0,40);}}
+  return preg_match('/^[a-f0-9]{40}$/D',$head)?$head:str_repeat('0',40);
  }
- private function status(string $repo,string $branch): array {
-  $head=$this->git(['rev-parse','HEAD']);$target=$this->git(['rev-parse','refs/remotes/origin/'.$branch]);
-  $dirty=$this->git(['status','--porcelain','--untracked-files=all'])!=='';$current=$this->git(['branch','--show-current']);
-  $ahead=$this->git(['merge-base','--is-ancestor',$head,$target],false)==='yes';$blocked=[];
-  if($dirty)$blocked[]='Uncommitted or untracked files exist. Commit and push your code before applying updates.';
-  if($current!==$branch)$blocked[]='Switch this checkout to '.$branch.' before updating.';
-  if($head!==$target&&!$ahead)$blocked[]='Local and remote histories differ, or local commits have not been pushed. Resolve them manually.';
-  if($head!==$target&&$ahead)try{$this->targetSafe($target,false);}catch(RuntimeException $e){$blocked[]=$e->getMessage();}
-  $changes=$head===$target?[]:array_values(array_filter(explode("\n",$this->git(['diff','--name-status','--no-renames',$head,$target,'--']))));
-  $deployment=$this->read('update-deployment.json');
-  return ['repository'=>$repo,'branch'=>$branch,'current'=>$head,'latest'=>$target,'summary'=>$this->git(['log','-1','--format=%s',$target]),'checked_at'=>date('Y-m-d H:i:s'),'checked_epoch'=>time(),'available'=>$head!==$target&&$ahead,'blocked'=>$blocked,'can_apply'=>$head!==$target&&$ahead&&!$blocked,'changes'=>array_slice($changes,0,300),'change_count'=>count($changes),'rollback'=>($deployment['installed']??'')===$head&&!$dirty?($deployment['previous']??null):null];
+ private function allowed(string $path): bool {
+  if($path===''||str_contains($path,'\\')||str_contains($path,"\0")||str_starts_with($path,'/')||preg_match('~(^|/)(\.|\.\.)(/|$)|[\x00-\x1f:]~',$path))throw new RuntimeException('Unsafe archive path.');
+  foreach(explode('/',$path) as $part)if(str_starts_with($part,'.')&&$part!=='.htaccess')return false;
+  return !preg_match('~^(storage|assets/uploads)(/|$)~',$path)&&$path!=='config/local.php';
+ }
+ private function local(string $path): string {
+  if(!$this->allowed($path))throw new RuntimeException('Protected patch path.');$full=$this->root;
+  foreach(explode('/',$path) as $part){$full.='/'.$part;if(is_link($full))throw new RuntimeException('A patch path is a symbolic link: '.$path);}
+  if(is_dir($full))throw new RuntimeException('A file conflicts with a local directory: '.$path);return $full;
+ }
+ private function hash(string $path): ?string {$file=$this->local($path);return is_file($file)?hash_file('sha256',$file):null;}
+ private function lint(string $file,string $name): void {
+  if(!function_exists('proc_open'))throw new RuntimeException('Enable PHP proc_open to validate downloaded PHP files.');
+  $p=proc_open([$this->config['update_php_binary']??PHP_BINDIR.'/php','-n','-l',$file],[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
+  if(!is_resource($p))throw new RuntimeException('Cannot start PHP validation.');fclose($pipes[0]);stream_get_contents($pipes[1]);stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);if(proc_close($p)!==0)throw new RuntimeException('PHP validation failed for '.$name.'. No code was replaced.');
+ }
+ private function stage(string $target,string $archive): array {
+  if(!class_exists('ZipArchive'))throw new RuntimeException('Enable PHP ZipArchive for code updates.');
+  $base='update-stage-'.bin2hex(random_bytes(8));mkdir($this->directory.'/'.$base,0700);$zipPath=$this->directory.'/'.$base.'/source.zip';file_put_contents($zipPath,$archive);$zip=new ZipArchive();
+  if($zip->open($zipPath)!==true)throw new RuntimeException('GitHub did not return a valid ZIP archive.');$files=[];$seen=[];$total=0;$prefix=null;
+  try{if($zip->numFiles>10000)throw new RuntimeException('Archive contains too many files.');
+   for($i=0;$i<$zip->numFiles;$i++){$stat=$zip->statIndex($i);$name=$stat['name'];$parts=explode('/',$name,2);if(count($parts)!==2||$parts[0]===''||$parts[0]==='..')throw new RuntimeException('Invalid archive root.');$prefix??=$parts[0];if($prefix!==$parts[0])throw new RuntimeException('Archive has multiple roots.');$path=rtrim($parts[1],'/');if($path==='')continue;
+    $safe=$this->allowed($path);$zip->getExternalAttributesIndex($i,$opsys,$attr);$type=($attr>>16)&0170000;if($type!==0&&$type!==0100000&&$type!==0040000)throw new RuntimeException('Archive contains a symlink or special file.');
+    $total+=$stat['size'];if($total>150000000||$stat['size']>20000000)throw new RuntimeException('Archive exceeds extraction limits.');if(!$safe||str_ends_with($name,'/'))continue;
+    $key=strtolower($path);if(isset($seen[$key]))throw new RuntimeException('Archive contains duplicate file paths.');$seen[$key]=true;
+    $data=$zip->getFromIndex($i);if($data===false||strlen($data)!==$stat['size'])throw new RuntimeException('Incomplete archive file.');$destination=$this->directory.'/'.$base.'/files/'.$path;$this->write($destination,$data);if(str_ends_with(strtolower($path),'.php'))$this->lint($destination,$path);$files[$path]=hash('sha256',$data);
+   }
+  }finally{$zip->close();unlink($zipPath);}
+  foreach(['index.php','api.php','actions.php','includes/bootstrap.php','includes/updater.php','includes/developer-view.php','assets/js/developer.js'] as $required)if(!isset($files[$required]))throw new RuntimeException('The GitHub archive is missing '.$required.'. Push the complete application first.');
+  $before=[];$changes=[];$previous=$this->read('update-installed.json');
+  foreach($files as $path=>$hash){$old=$this->hash($path);if($old!==$hash){$before[$path]=$old;$changes[$path]=$hash;}}
+  // Remove only files recorded by a previous archive deployment; preserve unmanaged files.
+  foreach(($previous['files']??[]) as $path=>$hash)if(!isset($files[$path])&&$this->allowed($path)&&$this->hash($path)!==null){$before[$path]=$this->hash($path);$changes[$path]=null;}
+  $state=['target'=>$target,'current'=>$this->current(),'base'=>$base,'files'=>$files,'before'=>$before,'changes'=>$changes,'created'=>time()];$this->save('update-stage.json',$state);return $state;
+ }
+ private function permissions(array $stage): array {
+  foreach($stage['changes'] as $path=>$hash){$full=$this->local($path);$parent=dirname($full);while(!is_dir($parent))$parent=dirname($parent);if(!is_writable($parent)||(file_exists($full)&&!is_writable($full)))return ['XAMPP needs write access to application code before patching ('.$path.'). Git metadata does not need write access.'];}return [];
  }
  public function check(): array {
   $lock=$this->lock();try{[$repo,$branch]=$this->identity();$cache=$this->read('update-check.json');
-   if(($cache['checked_epoch']??0)<time()-60||($cache['repository']??'')!==$repo||($cache['branch']??'')!==$branch){$this->git(['fetch','--no-tags','--no-recurse-submodules','origin','+refs/heads/'.$branch.':refs/remotes/origin/'.$branch]);$cache=$this->status($repo,$branch);$this->save('update-check.json',$cache);return $cache;}
-   $fresh=$this->status($repo,$branch);$fresh['checked_at']=$cache['checked_at'];$fresh['checked_epoch']=$cache['checked_epoch'];return $fresh;
+   if(($cache['checked_epoch']??0)<time()-60||($cache['repository']??'')!==$repo||($cache['branch']??'')!==$branch){$commit=json_decode($this->download('https://api.github.com/repos/'.$repo.'/commits/'.rawurlencode($branch),2000000),true);$target=$commit['sha']??'';if(!preg_match('/^[a-f0-9]{40}$/D',$target))throw new RuntimeException('Invalid GitHub version.');$cache=['repository'=>$repo,'branch'=>$branch,'latest'=>$target,'summary'=>explode("\n",$commit['commit']['message']??'GitHub update')[0],'checked_epoch'=>time(),'checked_at'=>date('Y-m-d H:i:s')];$this->save('update-check.json',$cache);}
+   $current=$this->current();$stage=$this->read('update-stage.json');$available=$current!==$cache['latest'];$blocked=[];$changes=[];
+   if($available){if(($stage['target']??'')!==$cache['latest']||($stage['current']??'')!==$current)$stage=$this->stage($cache['latest'],$this->download('https://codeload.github.com/'.$repo.'/zip/'.$cache['latest'],50000000));$blocked=$this->permissions($stage);foreach($stage['changes'] as $path=>$hash)$changes[]=($hash===null?'D':($stage['before'][$path]===null?'A':'M'))."\t".$path;}
+   $deployment=$this->read('update-deployment.json');return array_merge($cache,['current'=>$current,'available'=>$available,'blocked'=>$blocked,'can_apply'=>$available&&!$blocked,'changes'=>array_slice($changes,0,300),'change_count'=>count($changes),'rollback'=>($deployment['installed']??'')===$current?($deployment['previous']??null):null]);
   }finally{flock($lock,LOCK_UN);fclose($lock);}
  }
  public function apply(string $expectedHead,string $target,bool $rollback=false): array {
-  if(!preg_match('/^[a-f0-9]{40}$/D',$expectedHead)||!preg_match('/^[a-f0-9]{40}$/D',$target))throw new RuntimeException('Check for updates again before applying.');
-  $lock=$this->lock();$maintenance=$this->directory.'/update-maintenance.json';$backup='';
-  try{[$repo,$branch]=$this->identity();$state=$this->status($repo,$branch);
-   if($state['current']!==$expectedHead)throw new RuntimeException('The installed version changed. Refresh the preview.');
-   if($this->git(['status','--porcelain','--untracked-files=all'])!=='')throw new RuntimeException('Local changes must be committed before applying or rolling back.');
-   if($this->git(['branch','--show-current'])!==$branch)throw new RuntimeException('The checkout is not on the configured branch.');
-   if($rollback){if(($state['rollback']??null)!==$target)throw new RuntimeException('The selected rollback is no longer available.');}
-   else{if(!$state['can_apply']||$state['latest']!==$target)throw new RuntimeException('This update cannot be applied. Refresh the preview and resolve the listed blockers.');$cache=$this->read('update-check.json');if(($cache['latest']??'')!==$target||($cache['checked_epoch']??0)<time()-600)throw new RuntimeException('The preview expired. Check for updates again.');}
-   $this->targetSafe($target,true);
-   // Recheck after linting, before touching the working tree.
-   if($this->git(['rev-parse','HEAD'])!==$expectedHead||$this->git(['status','--porcelain','--untracked-files=all'])!=='')throw new RuntimeException('Files changed during validation. No update was applied.');
-   $backup='refs/vrs/backups/'.date('Ymd-His').'-'.substr($expectedHead,0,12).'-'.bin2hex(random_bytes(3));$this->git(['update-ref',$backup,$expectedHead]);
-   $this->save('update-maintenance.json',['started'=>time(),'previous'=>$expectedHead,'target'=>$target,'backup'=>$backup]);
-   try{$this->git($rollback?['reset','--keep',$target]:['merge','--ff-only','--no-edit',$target]);}
-   catch(Throwable $e){throw new RuntimeException('Git could not finish deployment. Previous code is retained at '.$backup.'. Inspect the checkout before retrying.');}
-   if($this->git(['rev-parse','HEAD'])!==$target)throw new RuntimeException('Version verification failed. Restore the backup reference manually.');
-   $this->save('update-deployment.json',['previous'=>$expectedHead,'installed'=>$target,'backup'=>$backup,'updated_at'=>date('Y-m-d H:i:s')]);
-   if(is_file($this->directory.'/update-check.json'))unlink($this->directory.'/update-check.json');
-   if(function_exists('opcache_reset'))opcache_reset();
-   return ['success'=>true,'current'=>$target,'previous'=>$expectedHead,'message'=>$rollback?'Previous code version restored.':'Update installed successfully.'];
-  }finally{if(is_file($maintenance))unlink($maintenance);flock($lock,LOCK_UN);fclose($lock);}
+  if(!preg_match('/^[a-f0-9]{40}$/D',$target))throw new RuntimeException('Invalid update version.');$lock=$this->lock();$maintenance=false;
+  try{if($this->current()!==$expectedHead)throw new RuntimeException('The installed version changed. Refresh the preview.');
+   if($rollback){$deployment=$this->read('update-deployment.json');if(($deployment['installed']??'')!==$expectedHead||($deployment['previous']??'')!==$target)throw new RuntimeException('Rollback is no longer available.');$stage=$this->read($deployment['backup'].'/manifest.json');$source=$deployment['backup'];}
+   else{$stage=$this->read('update-stage.json');if(($stage['target']??'')!==$target||($stage['current']??'')!==$expectedHead)throw new RuntimeException('Check for updates to download and preview this version first.');$source=$stage['base'];}
+   if($errors=$this->permissions($stage))throw new RuntimeException($errors[0]);
+   foreach($stage['changes'] as $path=>$hash){if($this->hash($path)!==$stage['before'][$path])throw new RuntimeException('Local files changed since the preview. Clear storage/update-stage.json and check again.');if($hash!==null&&hash_file('sha256',$this->directory.'/'.$source.'/files/'.$path)!==$hash)throw new RuntimeException('Downloaded file verification failed.');}
+   $backup='update-backup-'.date('Ymd-His').'-'.bin2hex(random_bytes(4));$inverse=['changes'=>$stage['before'],'before'=>$stage['changes']];
+   foreach($stage['before'] as $path=>$hash)if($hash!==null)$this->write($this->directory.'/'.$backup.'/files/'.$path,file_get_contents($this->local($path)));
+   $this->save($backup.'/manifest.json',$inverse);$oldInstalled=$this->read('update-installed.json');$this->save($backup.'/installed.json',$oldInstalled);
+   $this->save('update-maintenance.json',['started'=>time(),'backup'=>$backup]);$maintenance=true;$done=[];
+   try{foreach($stage['changes'] as $path=>$hash){$full=$this->local($path);if($hash===null){if(!unlink($full))throw new RuntimeException('Cannot remove '.$path);}else $this->write($full,file_get_contents($this->directory.'/'.$source.'/files/'.$path));$done[]=$path;}
+    $installed=$rollback?$this->read($source.'/installed.json'):['commit'=>$target,'files'=>$stage['files']];$installed['commit']=$target;$this->save('update-installed.json',$installed);
+    $this->save('update-deployment.json',['installed'=>$target,'previous'=>$expectedHead,'backup'=>$backup]);
+   }catch(Throwable $e){try{foreach(array_reverse($done) as $path){if($stage['before'][$path]===null){if(is_file($this->local($path)))unlink($this->local($path));}else $this->write($this->local($path),file_get_contents($this->directory.'/'.$backup.'/files/'.$path));}$this->save('update-installed.json',$oldInstalled);}catch(Throwable $restore){$maintenance=false;throw new RuntimeException('Patch recovery needs attention. Backup: storage/'.$backup);}throw new RuntimeException('Patch failed; previous files restored. '.$e->getMessage());}
+   @unlink($this->directory.'/update-stage.json');if(function_exists('opcache_reset'))opcache_reset();return ['success'=>true,'current'=>$target,'previous'=>$expectedHead,'message'=>$rollback?'Previous files restored.':'GitHub archive downloaded, backed up, and installed successfully.'];
+  }finally{if($maintenance)@unlink($this->directory.'/update-maintenance.json');flock($lock,LOCK_UN);fclose($lock);}
  }
 }
