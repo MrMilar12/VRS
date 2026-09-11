@@ -19,5 +19,4 @@
  }
  async function prepare(){if(busy||!state?.available)return;const target=state.latest;pending(true);progress(0,'Downloading and validating…');find('progress').parentElement.classList.add('is-working');status.textContent='Downloading and validating your selected patch…';try{render(await request({mode:'prepare',target}));}catch(error){state=null;status.textContent=error.message;}finally{find('progress').parentElement.classList.remove('is-working');pending(false);}}
  download.addEventListener('click',prepare);check.addEventListener('click',refresh);form.addEventListener('submit',event=>{event.preventDefault();install('apply');});rollback.addEventListener('click',()=>{find('confirm').hidden=false;install('rollback');});
- setInterval(()=>{if(!document.hidden)refresh();},60000);refresh();
 })();
