@@ -1,4 +1,13 @@
 <?php
+// Hosting-specific AI credentials are separate from database configuration.
+$bookingCloudFile=__DIR__.'/../config/ollama.local.php';
+if(is_file($bookingCloudFile)){
+ $bookingCloudConfig=require $bookingCloudFile;
+ if(!is_array($bookingCloudConfig))throw new RuntimeException('The private AI configuration is invalid.');
+ $config=array_replace($config??[],array_intersect_key($bookingCloudConfig,array_flip(['booking_ai_provider','ollama_url','ollama_model','ollama_api_key'])));
+ unset($bookingCloudConfig);
+}
+unset($bookingCloudFile);
 function booking_fields(): array {return ['destination'=>255,'start_datetime'=>16,'end_datetime'=>16,'vehicle_type'=>20,'passengers'=>5000,'purpose'=>5000,'preferred_driver'=>160,'fuel_remarks'=>1000];}
 function booking_provider(): string {global $config;return $config['booking_ai_provider']??'openai';}
 function booking_ollama_cloud(): bool {global $config;return str_ends_with($config['ollama_model']??'','-cloud')||strtolower(parse_url($config['ollama_url']??'',PHP_URL_HOST)??'')==='ollama.com';}

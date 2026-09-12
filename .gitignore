@@ -4,3 +4,5 @@
 /assets/uploads/*
 !/assets/uploads/.htaccess
 
+
+/config/ollama.local.php

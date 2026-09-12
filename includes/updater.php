@@ -45,7 +45,7 @@ final class VrsUpdater {
  private function allowed(string $path): bool {
   if($path===''||str_contains($path,'\\')||str_contains($path,"\0")||str_starts_with($path,'/')||preg_match('~(^|/)(\.|\.\.)(/|$)|[\x00-\x1f:]~',$path))throw new RuntimeException('Unsafe archive path.');
   foreach(explode('/',$path) as $part)if(str_starts_with($part,'.')&&$part!=='.htaccess')return false;
-  return !preg_match('~^(storage|assets/uploads)(/|$)~',$path)&&$path!=='config/local.php';
+  return !preg_match('~^(storage|assets/uploads)(/|$)~',$path)&&!in_array($path,['config/local.php','config/ollama.local.php'],true);
  }
  private function local(string $path): string {
   if(!$this->allowed($path))throw new RuntimeException('Protected patch path.');$full=$this->root;
