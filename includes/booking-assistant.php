@@ -2,7 +2,9 @@
 function booking_fields(): array {return ['destination'=>255,'start_datetime'=>16,'end_datetime'=>16,'vehicle_type'=>20,'passengers'=>5000,'purpose'=>5000,'preferred_driver'=>160,'fuel_remarks'=>1000];}
 function booking_provider(): string {global $config;return $config['booking_ai_provider']??'openai';}
 function booking_ollama_cloud(): bool {global $config;return str_ends_with($config['ollama_model']??'','-cloud')||strtolower(parse_url($config['ollama_url']??'',PHP_URL_HOST)??'')==='ollama.com';}
-function booking_configured(): bool {global $config;return function_exists('curl_init')&&match(booking_provider()){'ollama'=>!empty($config['ollama_url'])&&!empty($config['ollama_model']),'openai'=>!empty($config['openai_api_key']),default=>false};}
+function booking_ollama_direct(): bool {global $config;return strtolower(parse_url($config['ollama_url']??'',PHP_URL_HOST)??'')==='ollama.com';}
+function booking_ollama_key(): string {global $config;return trim((string)($config['ollama_api_key']??getenv('OLLAMA_API_KEY')?:''));}
+function booking_configured(): bool {global $config;return function_exists('curl_init')&&match(booking_provider()){'ollama'=>!empty($config['ollama_url'])&&!empty($config['ollama_model'])&&(!booking_ollama_direct()||booking_ollama_key()!==''),'openai'=>!empty($config['openai_api_key']),default=>false};}
 function booking_validate(array $raw): array {
  $draft=[];
  foreach(booking_fields() as $key=>$max){$value=$raw[$key]??null;if($value!==null&&(!is_string($value)||mb_strlen($value)>$max))throw new RuntimeException('The assistant returned invalid trip details. Please try again.');$draft[$key]=$value===null?'':trim($value);}
@@ -51,6 +53,7 @@ function booking_ollama_payload(array $messages,array $draft): array {
  'options'=>['temperature'=>0,'num_ctx'=>8192,'num_predict'=>2200]];
  // Ollama Cloud does not support the structured-output format parameter.
  if(booking_ollama_cloud())unset($payload['format'],$payload['options']);
+ if(booking_ollama_direct())$payload['model']=preg_replace('/-cloud$/','',$payload['model']);
  return $payload;
 }
 function booking_parse_ollama_response(array $response): array {
@@ -62,12 +65,18 @@ function booking_ollama_respond(array $messages,array $draft): array {
  if(!booking_configured())throw new RuntimeException('Ollama booking is not configured. Contact your administrator or use the request form.');
  $url=rtrim($config['ollama_url'],'/');$parts=parse_url($url);
  if(!$parts||!in_array($parts['scheme']??'',['http','https'])||empty($parts['host'])||isset($parts['user'])||isset($parts['pass'])||isset($parts['query'])||isset($parts['fragment']))throw new RuntimeException('The Ollama server address is invalid. Contact your administrator.');
+ $headers=['Content-Type: application/json'];
+ if(booking_ollama_direct()){
+  if($parts['scheme']!=='https'||isset($parts['port'])&&$parts['port']!==443||!in_array($parts['path']??'',['','/','/api'],true))throw new RuntimeException('Set the Ollama Cloud address to https://ollama.com.');
+  $key=booking_ollama_key();if($key===''||strpbrk($key,"\r\n")!==false)throw new RuntimeException('Configure a valid Ollama Cloud API key in config/local.php.');
+  $headers[]='Authorization: Bearer '.$key;$url='https://ollama.com';
+ }
  $curl=curl_init($url.'/api/chat');
- curl_setopt_array($curl,[CURLOPT_POST=>true,CURLOPT_RETURNTRANSFER=>true,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_TIMEOUT=>120,CURLOPT_HTTPHEADER=>['Content-Type: application/json'],CURLOPT_POSTFIELDS=>json_encode(booking_ollama_payload($messages,$draft),JSON_THROW_ON_ERROR)]);
+ curl_setopt_array($curl,[CURLOPT_POST=>true,CURLOPT_RETURNTRANSFER=>true,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_TIMEOUT=>120,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_HTTPHEADER=>$headers,CURLOPT_POSTFIELDS=>json_encode(booking_ollama_payload($messages,$draft),JSON_THROW_ON_ERROR)]);
  try{
   $body=curl_exec($curl);$status=curl_getinfo($curl,CURLINFO_RESPONSE_CODE);
-  if($body===false)throw new RuntimeException(curl_errno($curl)===CURLE_OPERATION_TIMEDOUT?'Ollama is taking too long. Try again after the model has loaded, or use the request form.':'Cannot reach Ollama. Make sure it is running on the configured server.');
-  if($status===401||$status===403)throw new RuntimeException('Ollama Cloud sign-in is required. Run ollama signin on the server, then try again.');
+  if($body===false)throw new RuntimeException(curl_errno($curl)===CURLE_OPERATION_TIMEDOUT?'Ollama is taking too long. Try again after the model has loaded, or use the request form.':(booking_ollama_direct()?'Cannot reach Ollama Cloud. Check whether your hosting allows outgoing HTTPS to ollama.com.':'Cannot reach the configured Ollama server. On shared hosting, set ollama_url to https://ollama.com and configure ollama_api_key.'));
+  if($status===401||$status===403)throw new RuntimeException((booking_ollama_direct()?'Ollama Cloud rejected the API key or model access. Check your API key and account permissions.':'Ollama Cloud sign-in is required on your local Ollama server. For shared hosting, use https://ollama.com with an API key.'));
   if($status===429)throw new RuntimeException('Ollama Cloud usage limit reached. Please try later or use the request form.');
   if($status===404)throw new RuntimeException('The configured Ollama model or endpoint was not found. Check the server address and installed model name.');
   if($status!==200)throw new RuntimeException('Ollama could not process the request. Please try again or use the request form.');

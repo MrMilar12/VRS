@@ -27,3 +27,11 @@ $config['ollama_model']='gpt-oss:120b-cloud';
 $cloud=booking_ollama_payload([['role'=>'user','content'=>'A van to Baler']],[]);
 check_booking(booking_ollama_cloud()&&!isset($cloud['format'])&&!isset($cloud['options'])&&str_contains($cloud['messages'][0]['content'],'Return only JSON'),'Cloud payload omits unsupported structured-output parameters and retains schema instructions');
 check_booking($cloud['model']==='gpt-oss:120b-cloud'&&$cloud['stream']===false,'Cloud model uses local Ollama forwarding');
+
+$config['ollama_url']='https://ollama.com';$config['ollama_api_key']='';
+check_booking(!booking_configured(),'Direct cloud requires its own API key');
+$config['ollama_api_key']='fixture-cloud-key';
+check_booking(booking_configured()&&booking_ollama_direct(),'Direct cloud recognizes configured credentials');
+$direct=booking_ollama_payload([['role'=>'user','content'=>'Book a van']],[]);
+check_booking($direct['model']==='gpt-oss:120b'&&!isset($direct['format']),'Direct cloud normalizes local cloud model suffix');
+check_booking(!str_contains(json_encode($direct),'fixture-cloud-key'),'API key excluded from model prompt');
