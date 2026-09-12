@@ -13,7 +13,18 @@ function booking_provider(): string {global $config;return $config['booking_ai_p
 function booking_ollama_cloud(): bool {global $config;return str_ends_with($config['ollama_model']??'','-cloud')||strtolower(parse_url($config['ollama_url']??'',PHP_URL_HOST)??'')==='ollama.com';}
 function booking_ollama_direct(): bool {global $config;return strtolower(parse_url($config['ollama_url']??'',PHP_URL_HOST)??'')==='ollama.com';}
 function booking_ollama_key(): string {global $config;return trim((string)($config['ollama_api_key']??getenv('OLLAMA_API_KEY')?:''));}
-function booking_configured(): bool {global $config;return function_exists('curl_init')&&match(booking_provider()){'ollama'=>!empty($config['ollama_url'])&&!empty($config['ollama_model'])&&(!booking_ollama_direct()||booking_ollama_key()!==''),'openai'=>!empty($config['openai_api_key']),default=>false};}
+function booking_configuration_error(): ?string {
+ global $config;
+ if(!function_exists('curl_init'))return 'The PHP cURL extension is missing. Enable it for the PHP version serving this website.';
+ if(booking_provider()==='ollama'){
+  if(empty($config['ollama_url'])||empty($config['ollama_model']))return 'The Ollama server URL or model is missing. Configure ollama_url and ollama_model.';
+  if(booking_ollama_direct()&&booking_ollama_key()==='')return 'The Ollama Cloud API key is missing on this server. Upload your private config/ollama.local.php file to this website, or set OLLAMA_API_KEY in the PHP server environment. Git updates do not include the private key file.';
+  return null;
+ }
+ if(booking_provider()==='openai')return empty($config['openai_api_key'])?'The OpenAI API key is missing on this server. Configure openai_api_key or OPENAI_API_KEY.':null;
+ return 'The AI provider is unsupported. Set booking_ai_provider to ollama or openai.';
+}
+function booking_configured(): bool {return booking_configuration_error()===null;}
 function booking_validate(array $raw): array {
  $draft=[];
  foreach(booking_fields() as $key=>$max){$value=$raw[$key]??null;if($value!==null&&(!is_string($value)||mb_strlen($value)>$max))throw new RuntimeException('The assistant returned invalid trip details. Please try again.');$draft[$key]=$value===null?'':trim($value);}

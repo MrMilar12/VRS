@@ -9,7 +9,7 @@ page_heading('Your travel assistant','A little less planning. A lot more moving 
 <div class="booking-layout <?=$showReview?'':'booking-chat-only'?>" data-booking-assistant>
  <section class="panel booking-chat" aria-labelledby="booking-chat-title">
   <div class="panel-heading assistant-chat-heading"><div class="assistant-identity"><span class="assistant-symbol" aria-hidden="true"><?=icon('car',22)?></span><div><h2 id="booking-chat-title">VRS companion</h2><p>Here to help you get there</p></div></div><button class="btn small assistant-reset" type="button" data-booking-reset>New conversation</button></div>
-  <?php if(!$connected):?><div class="booking-notice" role="status"><strong>AI booking is not connected yet</strong><p>Your administrator needs to connect the AI service. Use the regular request form while the AI service is unavailable.</p></div><?php endif?>
+  <?php if(!$connected):?><div class="booking-notice" role="status"><strong>AI booking is not connected yet</strong><p><?=e(booking_configuration_error())?></p><p>Use the regular request form while your administrator completes the connection.</p></div><?php endif?>
   <div class="assistant-welcome" data-assistant-welcome <?=empty($state['messages'])?'':'hidden'?>>
    <span class="assistant-eyebrow">YOUR NEXT JOURNEY STARTS HERE</span>
    <h2>Where shall we<br><em>go today?</em></h2>

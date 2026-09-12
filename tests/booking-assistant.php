@@ -30,8 +30,10 @@ check_booking($cloud['model']==='gpt-oss:120b-cloud'&&$cloud['stream']===false,'
 
 $config['ollama_url']='https://ollama.com';$config['ollama_api_key']='';
 check_booking(!booking_configured(),'Direct cloud requires its own API key');
+check_booking(str_contains(booking_configuration_error(),'API key is missing on this server')&&str_contains(booking_configuration_error(),'config/ollama.local.php'),'Missing cloud credentials explain the private deployment file');
 $config['ollama_api_key']='fixture-cloud-key';
 check_booking(booking_configured()&&booking_ollama_direct(),'Direct cloud recognizes configured credentials');
+check_booking(booking_configuration_error()===null,'Configured cloud has no setup error');
 $direct=booking_ollama_payload([['role'=>'user','content'=>'Book a van']],[]);
 check_booking($direct['model']==='gpt-oss:120b'&&!isset($direct['format']),'Direct cloud normalizes local cloud model suffix');
 check_booking(!str_contains(json_encode($direct),'fixture-cloud-key'),'API key excluded from model prompt');
