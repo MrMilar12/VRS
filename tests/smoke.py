@@ -36,7 +36,7 @@ def check(value,label):
     assert value,label
     print('PASS:',label)
 with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
-    app=Path(folder)/'app';shutil.copytree(ROOT,app,ignore=shutil.ignore_patterns('.git','*.sqlite','*.sqlite-journal','local.php','auth.key','__pycache__'))
+    app=Path(folder)/'app';shutil.copytree(ROOT,app,ignore=shutil.ignore_patterns('.git','*.sqlite','*.sqlite-journal','local.php','ollama.local.php','auth.key','__pycache__'))
     sock=socket.socket();sock.bind(('127.0.0.1',0));port=sock.getsockname()[1];sock.close()
     # Keep integration checks offline, regardless of the configured default AI provider.
     with (app/'config/system.php').open('r+') as settings:
