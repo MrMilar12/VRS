@@ -1,5 +1,27 @@
 <?php
-require __DIR__.'/includes/bootstrap.php';
+// Keep hosted PHP warnings/fatal errors from corrupting JSON responses.
+ini_set('display_errors','0');
+$apiRequestId=bin2hex(random_bytes(8));
+header('X-VRS-Request-ID: '.$apiRequestId);
+$apiBufferLevel=ob_get_level();
+ob_start(static function(string $body,int $phase)use($apiRequestId): string {
+ if($phase&PHP_OUTPUT_HANDLER_CLEAN)return '';
+ json_decode($body);if(json_last_error()===JSON_ERROR_NONE)return $body;
+ error_log('VRS API '.$apiRequestId.': request ended with a non-JSON response.');
+ if(!headers_sent()){if(http_response_code()<400)http_response_code(500);header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');}
+ return json_encode(['error'=>'The server could not finish the API request. Check the hosting PHP error log. Reference: '.$apiRequestId]);
+});
+function api_bootstrap_failure(string $reference,int $bufferLevel): never {
+ while(ob_get_level()>$bufferLevel)ob_end_clean();
+ if(!headers_sent()){header_remove('Location');http_response_code(500);header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');}
+ echo json_encode(['error'=>'The server could not start the API. Check the hosting PHP error log. Reference: '.$reference]);exit;
+}
+register_shutdown_function(static function()use($apiRequestId,$apiBufferLevel){
+ $error=error_get_last();if($error&&in_array($error['type'],[E_ERROR,E_PARSE,E_CORE_ERROR,E_COMPILE_ERROR],true)){
+  error_log('VRS API '.$apiRequestId.': '.$error['message'].' in '.$error['file'].':'.$error['line']);api_bootstrap_failure($apiRequestId,$apiBufferLevel);
+ }
+});
+try{require __DIR__.'/includes/bootstrap.php';}catch(Throwable $e){error_log('VRS API '.$apiRequestId.': '.$e->getMessage());api_bootstrap_failure($apiRequestId,$apiBufferLevel);}
 header('Content-Type: application/json; charset=utf-8');
 if(!$user){http_response_code(401);echo json_encode(['error'=>'Sign in to continue.']);exit;}
 try{

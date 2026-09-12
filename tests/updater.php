@@ -20,6 +20,10 @@ try{
  $u->apply($old,$new);expect(file_get_contents($root.'/index.php')===$files['index.php']&&is_file($root.'/added.txt')&&!is_file($root.'/obsolete.txt'),'Downloaded patch overwrites code, adds files and removes previously deployed files');
  expect(file_get_contents($root.'/config/local.php')==='SECRET'&&file_get_contents($root.'/storage/db.sqlite')==='DATABASE'&&file_get_contents($root.'/assets/uploads/photo')==='PHOTO'&&!is_dir($root.'/.git'),'Runtime files and Git metadata protected');
  $u->apply($new,$old,true);expect(file_get_contents($root.'/index.php')==="<?php // local edit\n"&&!is_file($root.'/added.txt')&&file_get_contents($root.'/obsolete.txt')==='old','Rollback restores exact local edits and deleted files');expect(!is_file($root.'/storage/update-maintenance.json'),'Maintenance marker removed');
+ $restricted=new VrsUpdater($root,['update_php_binary'=>'/no-hosting-cli/php']);
+ $parse=new ReflectionMethod($restricted,'lint');$parse->invoke($restricted,$root.'/index.php','index.php');expect(true,'Unavailable hosting CLI uses built-in parser');
+ file_put_contents($root.'/invalid.php','<?php syntax error!');reject(fn()=>$parse->invoke($restricted,$root.'/invalid.php','invalid.php'),'PHP validation failed');unlink($root.'/invalid.php');
+ $oversize=$files;$oversize['large.php']='<?php //'.str_repeat('x',900001);reject(fn()=>$stage->invoke($u,$new,archive_test($oversize)),'hosting-safe size limit');
  $bad=$files;$bad['index.php']='<?php syntax error!';reject(fn()=>$stage->invoke($u,$new,archive_test($bad)),'PHP validation failed');$bad=$files;$bad['../escape']='bad';reject(fn()=>$stage->invoke($u,$new,archive_test($bad)),'Unsafe archive path');
  $bad=$files;$bad['INDEX.php']='<?php';reject(fn()=>$stage->invoke($u,$new,archive_test($bad)),'duplicate');
  symlink($root.'/config/local.php',$root.'/added.txt');reject(fn()=>$stage->invoke($u,$new,archive_test($files)),'symbolic link');unlink($root.'/added.txt');

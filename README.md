@@ -166,7 +166,7 @@ Availability is computed by PHP from current records, scheduled trips, turnaroun
 
 Administrators can open **Developer center**. Click **Check for updates** to check the configured GitHub branch. Opening the page does not contact GitHub, and there are no automatic checks. Choose **Update now** to download the selected commit as a ZIP, validate its files and PHP syntax, and show the patch preview. Downloads and installations require manual actions. Installation requires an administrator password and confirmation.
 
-Git is not required. The updater never writes `.git`. Configure `update_repository`, `update_branch`, and `update_php_binary` in `config/local.php`; defaults are `MrMilar12/VRS`, `main`, and the server PHP CLI. PHP needs cURL, ZipArchive, and proc_open. Private repositories can use a server environment variable `VRS_GITHUB_TOKEN`. The server needs HTTPS access to api.github.com and codeload.github.com.
+Git is not required. The updater never writes `.git`. Configure `update_repository`, `update_branch`, and `update_php_binary` in `config/local.php`; defaults are `MrMilar12/VRS`, `main`, and the server PHP CLI. PHP needs cURL and ZipArchive. Validation prefers proc_open with PHP CLI lint; when disabled, the tokenizer extension with TOKEN_PARSE checks syntax without executing code. The fallback does not perform every CLI compile-time check. Private repositories can use a server environment variable `VRS_GITHUB_TOKEN`. The server needs HTTPS access to api.github.com and codeload.github.com.
 
 The PHP server account needs write access to application code and storage. Grant access only to the application's code directories/files, without changing Git metadata or runtime permissions. Protected paths include dotfiles (except application .htaccess), storage, assets/uploads, and config/local.php. ZIP traversal, symlinks, duplicate paths, oversized archives, and invalid PHP are rejected.
 
@@ -175,3 +175,10 @@ Applying backs up the actual local files before replacing them, including uncomm
 Checks run only when requested, with no polling, webhook, or background service. The first installation can read the existing Git HEAD without invoking Git; ZIP-only installations start with an unknown version until their first patch. Keep storage backups private and include them in disk-space monitoring. Do not delete the latest backup while rollback is needed.
 
 Validation: `php tests/updater.php` uses disposable ZIP archives to test patching, rollback, runtime preservation, stale previews, locking, archive validation, and PHP linting. `python3 tests/smoke.py` checks page rendering and access controls.
+
+Restricted-host validation: `php -d disable_functions=proc_open tests/updater.php`. If an older deployed updater still requires proc_open, upload the revised `includes/updater.php` manually once before using web patches.
+
+
+### InfinityFree updater repair
+
+The updater supports disabled process execution and missing CLI binaries, using PHP tokenizer validation. GitHub downloads use cURL or verified HTTPS streams (allow_url_fopen and OpenSSL required for streams). For private repositories, update_github_token may be set in the protected config/local.php. Host-controlled file limits and permissions still apply. Upload the revised includes/updater.php manually once to repair an older hosted updater; this does not migrate databases or configure a new hosting account.

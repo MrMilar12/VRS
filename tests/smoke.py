@@ -43,7 +43,7 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
         config_text=settings.read().replace("getenv('BOOKING_AI_PROVIDER') ?: 'ollama'", "'openai'").replace("getenv('OPENAI_API_KEY') ?: ''", "''")
         settings.seek(0);settings.write(config_text);settings.truncate()
     with open(Path(folder)/'server.log','w+') as log:
-        proc=subprocess.Popen([PHP,'-S',f'127.0.0.1:{port}','router.php'],cwd=app,stdout=log,stderr=log)
+        proc=subprocess.Popen([PHP,'-d','opcache.enable=0','-d','opcache.enable_cli=0','-S',f'127.0.0.1:{port}','router.php'],cwd=app,stdout=log,stderr=log)
         try:
             base=f'http://127.0.0.1:{port}';admin=Client(base)
             for _ in range(40):
@@ -105,7 +105,9 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
             check('reset' in assistant_post({'mode':'reset'}),'Assistant supports clearing conversation')
             day=(datetime.now()-timedelta(days=5)).strftime('%Y-%m-%d')
             data={'action':'save_request','vehicle_type':'SUV','passengers':'Ana Flores, Test Guest','start_datetime':day+'T08:00','end_datetime':day+'T12:00','destination':'HTTP Integration Test','purpose':'Complete workflow test','fuel_quantity':'5','office_id':'3','submit_mode':'submit'}
-            text,url=requester.post('actions.php',data);match=re.search(r'id=(\d+)',url);check(bool(match),'Create requisition');rid=match[1]
+            text,url=requester.post('actions.php',data);check('id=v1_' in url and 'HTTP Integration Test' in text,'Create requisition with encrypted redirect')
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                rid=str(db.execute("SELECT id FROM requisitions WHERE destination='HTTP Integration Test' ORDER BY id DESC").fetchone()[0])
             check('Pending Administrative Approval' in text and 'Administrative Office' in text,'Office binding and initial status')
             text,_=requester.post('actions.php',{'action':'approve','id':rid,'password':'Demo@12345'});check('permission' in text,'Requester cannot approve')
             supervisor=Client(base);supervisor.login('supervisor@vrs.local')
@@ -128,13 +130,16 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
             text,_=admin.post('actions.php',{'action':'approve','id':rid,'password':'Demo@12345','vehicle_id':'3','driver_id':'5','remarks':'Confirmed'});check('Request marked approved' in text,'Administrative assignment and approval')
             text,_=requester.post('print/requisition.php',{'id':rid});check('Requisition Slip for Vehicle Use' in text and 'HTTP Integration Test - corrected' in text and 'data-slip-qr="VR-' in text,'Populated requisition printing')
             _,assistant_url=requester.post('actions.php',{**data,'destination':'Assistant review booking','return_to':'index.php?page=assistant','status':'Approved','vehicle_id':'3','requester_id':'1'})
-            assistant_id=re.search(r'id=(\d+)',assistant_url)[1]
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                assistant_id=str(db.execute("SELECT id FROM requisitions WHERE destination='Assistant review booking' ORDER BY id DESC").fetchone()[0])
             with sqlite3.connect(app/'storage/demo.sqlite') as db:
                 stored=db.execute('SELECT status,vehicle_id,requester_id FROM requisitions WHERE id=?',(assistant_id,)).fetchone()
                 owner=db.execute("SELECT id FROM users WHERE email='requester@vrs.local'").fetchone()[0]
                 check(stored==('Pending Administrative Approval',None,owner),'Assistant review submits only for the signed-in requester and cannot self-approve or assign')
             # A second request with an overlapping vehicle must fail final approval.
-            _,url=requester.post('actions.php',{**data,'destination':'HTTP conflict test'});conflict_id=re.search(r'id=(\d+)',url)[1]
+            _,url=requester.post('actions.php',{**data,'destination':'HTTP conflict test'})
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                conflict_id=str(db.execute("SELECT id FROM requisitions WHERE destination='HTTP conflict test' ORDER BY id DESC").fetchone()[0])
             text,_=admin.post('actions.php',{'action':'approve','id':conflict_id,'password':'Demo@12345','vehicle_id':'3','driver_id':'5'});check('overlapping' in text,'Overlapping final approval blocked')
             # Conflicting resources are visibly blocked and override is explicit.
             code,assignment_form,_=admin.get('index.php?page=request&id='+conflict_id)
@@ -217,6 +222,14 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
                         check(code==200 and f'Private calendar destination {uid}' in schedule and all(f'Private calendar destination {other[0]}' not in schedule for other in accounts if other[0]!=uid),role+' printed schedule contains only owned trips')
             anonymous=Client(base)
             check(anonymous.get('api.php?action=calendar')[0]==401,'Calendar API requires sign-in')
+            original_config=(app/'config/system.php').read_text()
+            try:
+                (app/'config/system.php').write_text("<?php throw new RuntimeException('PRIVATE_CONFIGURATION_DETAIL');")
+                code,body,_=admin.get('api.php?action=updates')
+                result=json.loads(body)
+                check(code==500 and 'Reference:' in result['error'] and 'PRIVATE_CONFIGURATION_DETAIL' not in body,'API initialization failure returns safe JSON with a log reference')
+            finally:
+                (app/'config/system.php').write_text(original_config)
             print('All HTTP integration checks passed; disposable database removed.')
         finally:
             proc.terminate();proc.wait(timeout=10)
