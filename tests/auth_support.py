@@ -8,6 +8,7 @@ def totp(secret, at=None):
     offset=digest[-1]&15
     return str((struct.unpack('>I',digest[offset:offset+4])[0]&0x7fffffff)%1000000).zfill(6)
 def finish_mfa(post,email,text,url):
+    if url.endswith('index.php'): return text,url
     assert 'two-factor.php' in url, 'Password must lead to second-factor verification'
     secret=re.search(r'<code data-setup-secret>([^<]+)</code>',text)
     if secret:

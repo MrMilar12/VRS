@@ -14,17 +14,26 @@ if($_SERVER['REQUEST_METHOD']==='POST')try{
   $counter=auth_totp_counter($_SESSION['auth_enrollment'],$code);
   if($counter===null)throw new RuntimeException('The code is invalid or expired. Check your authenticator and try again.');
   $codes=auth_recovery_codes();$encrypted=auth_encrypt($_SESSION['auth_enrollment']);
-  run('INSERT INTO auth_factors(user_id,secret_cipher,recovery_hashes,last_counter) VALUES(?,?,?,?)',[$account['id'],$encrypted,json_encode(array_map('auth_recovery_hash',$codes)),$counter]);
+  lock_transaction();
+  try{
+   run('INSERT INTO auth_factors(user_id,secret_cipher,recovery_hashes,last_counter) VALUES(?,?,?,?)',[$account['id'],$encrypted,json_encode(array_map('auth_recovery_hash',$codes)),$counter]);
+   run('INSERT INTO audit_logs(user_id,action,details,created_at) VALUES(?,?,?,?)',[$account['id'],'Authenticator enrolled','Second factor verified; recovery codes issued',date('Y-m-d H:i:s')]);
+   finish_transaction(true);
+  }catch(Throwable $e){finish_transaction(false);throw $e;}
   $_SESSION['auth_pending']['verified']=true;$_SESSION['auth_recovery']=$codes;unset($_SESSION['auth_enrollment']);
-  run('INSERT INTO audit_logs(user_id,action,details,created_at) VALUES(?,?,?,?)',[$account['id'],'Authenticator enrolled','Second factor verified; recovery codes issued',date('Y-m-d H:i:s')]);
   redirect('two-factor.php');
  }
  if($factor&&$action==='verify'){
-  if(!auth_verify_factor((int)$account['id'],$code))throw new RuntimeException('The code is invalid, expired, or already used. Wait for a new code or use a recovery code.');
-  auth_complete($account);redirect('index.php');
+  auth_complete($account,true,$code);redirect('index.php');
  }
  throw new RuntimeException('Refresh the page and try again.');
-}catch(Throwable $e){$error=$e instanceof PDOException?'Verification is temporarily unavailable. Please sign in again.':$e->getMessage();}
+}catch(Throwable $e){
+ if($e instanceof PDOException){
+  $reference=bin2hex(random_bytes(8));$code=$e->errorInfo[1]??'unknown';
+  error_log('VRS two-factor '.$reference.': SQLSTATE='.$e->getCode().' driver_code='.$code);
+  $error='Verification could not finish because of a database error. Reference '.$reference.' (SQLSTATE '.$e->getCode().', code '.$code.'). Your verification was not completed.';
+ }else{$error=$e->getMessage();}
+}
 $recovery=!empty($_SESSION['auth_pending']['verified'])&&!empty($_SESSION['auth_recovery']);
 public_auth_start($recovery?'Save your recovery codes':($factor?'Verify your sign-in':'Set up two-step verification'),$recovery?'Store these codes somewhere safe before continuing.':($factor?'Enter the code from your authenticator app, or one unused recovery code.':'Add VRS to your authenticator app, then enter its six-digit code.'));
 if($error):?><div class="auth-error" role="alert"><?=e($error)?></div><?php endif?>

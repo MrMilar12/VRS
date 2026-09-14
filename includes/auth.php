@@ -64,11 +64,12 @@ function auth_pending_account(): ?array {
  if(!$account||!hash_equals($pending['credential'],hash('sha256',$account['password_hash']))) {unset($_SESSION['auth_pending'],$_SESSION['auth_enrollment'],$_SESSION['auth_recovery']);return null;}
  return $account;
 }
-function auth_complete(array $account,bool $mfa=true): void {
+function auth_complete(array $account,bool $mfa=true,?string $factorCode=null): void {
  global $user;
  // Do not publish an authenticated session until all database work succeeds.
  $csrf=bin2hex(random_bytes(32));lock_transaction();
  try{
+  if($factorCode!==null&&!auth_verify_factor((int)$account['id'],$factorCode))throw new RuntimeException('The code is invalid, expired, or already used. Wait for a new code or use a recovery code.');
   auth_clear_limit('password-account',strtolower($account['email']));auth_clear_limit('factor',(string)$account['id']);
   run('INSERT INTO audit_logs(user_id,action,details,created_at) VALUES(?,?,?,?)',[$account['id'],'Signed in',$mfa?'Password and second factor verified':'Password verified; authenticator turned off',date('Y-m-d H:i:s')]);
   finish_transaction(true);
@@ -76,18 +77,16 @@ function auth_complete(array $account,bool $mfa=true): void {
  session_regenerate_id(true);$_SESSION=['database_identity'=>$_SESSION['database_identity'],'csrf'=>$csrf,'user_id'=>$account['id'],'auth_level'=>$mfa?'mfa':'password','auth_started'=>time(),'auth_seen'=>time(),'auth_credential'=>hash('sha256',$account['password_hash'])];
  $user=$account;
 }
+// Called within auth_complete's transaction, so a failed sign-in does not consume a code.
 function auth_verify_factor(int $id,string $code): bool {
- global $pdo;$transaction=false;
- try{
-  lock_transaction();$transaction=true;
-  $factor=one('SELECT * FROM auth_factors WHERE user_id=?'.($pdo->getAttribute(PDO::ATTR_DRIVER_NAME)==='mysql'?' FOR UPDATE':''),[$id]);
-  if(!$factor){finish_transaction(false);return false;}
-  $counter=auth_totp_counter(auth_decrypt($factor['secret_cipher']),$code,(int)$factor['last_counter']);
-  if($counter!==null){run('UPDATE auth_factors SET last_counter=? WHERE user_id=?',[$counter,$id]);finish_transaction(true);return true;}
-  $normalized=strtoupper(str_replace(['-',' '],'',$code));$hashes=json_decode($factor['recovery_hashes'],true,512,JSON_THROW_ON_ERROR);
-  if(preg_match('/^[A-F0-9]{20}$/D',$normalized)){foreach($hashes as $i=>$hash)if(hash_equals($hash,auth_recovery_hash($code))){unset($hashes[$i]);run('UPDATE auth_factors SET recovery_hashes=? WHERE user_id=?',[json_encode(array_values($hashes)),$id]);finish_transaction(true);return true;}}
-  finish_transaction(false);return false;
- }catch(Throwable $e){if($transaction&&($pdo->inTransaction()||$pdo->getAttribute(PDO::ATTR_DRIVER_NAME)==='sqlite'))finish_transaction(false);throw $e;}
+ global $pdo;
+ $factor=one('SELECT * FROM auth_factors WHERE user_id=?'.($pdo->getAttribute(PDO::ATTR_DRIVER_NAME)==='mysql'?' FOR UPDATE':''),[$id]);
+ if(!$factor)return false;
+ $counter=auth_totp_counter(auth_decrypt($factor['secret_cipher']),$code,(int)$factor['last_counter']);
+ if($counter!==null){run('UPDATE auth_factors SET last_counter=? WHERE user_id=?',[$counter,$id]);return true;}
+ $normalized=strtoupper(str_replace(['-',' '],'',$code));$hashes=json_decode($factor['recovery_hashes'],true,512,JSON_THROW_ON_ERROR);
+ if(preg_match('/^[A-F0-9]{20}$/D',$normalized)){foreach($hashes as $i=>$hash)if(hash_equals($hash,auth_recovery_hash($code))){unset($hashes[$i]);run('UPDATE auth_factors SET recovery_hashes=? WHERE user_id=?',[json_encode(array_values($hashes)),$id]);return true;}}
+ return false;
 }
 
 function auth_session_valid(?array $account,array $session,?int $now=null,bool $allowPassword=false): bool {
@@ -96,5 +95,8 @@ function auth_session_valid(?array $account,array $session,?int $now=null,bool $
 }
 
 function auth_is_disabled(int $id): bool {
- return (int)(one('SELECT authenticator_disabled FROM auth_preferences WHERE user_id=?',[$id])['authenticator_disabled']??0)===1;
+ $preference=one('SELECT authenticator_disabled FROM auth_preferences WHERE user_id=?',[$id]);
+ if($preference)return (int)$preference['authenticator_disabled']===1;
+ // New accounts opt in from their profile; existing enrolled factors stay required.
+ return !one('SELECT user_id FROM auth_factors WHERE user_id=?',[$id]);
 }

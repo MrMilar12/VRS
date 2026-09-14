@@ -40,6 +40,14 @@ with tempfile.TemporaryDirectory(prefix='vrs-auth-') as folder:
                 try:visitor.request('register.php');break
                 except OSError:time.sleep(.1)
             db=sqlite3.connect(app/'storage/demo.sqlite')
+            optional=Client(base);_,_,url=optional.password('daniel@vrs.local','Demo@12345')
+            check(url.endswith('index.php'),'New account can sign in without mandatory authenticator enrollment')
+            _,profile,_=optional.request('index.php?page=profile')
+            check('Two-factor authentication is optional' in profile and 'Turn on authenticator' in profile,'Profile offers optional authenticator controls')
+            optional.request('actions.php',{'action':'logout'})
+            # Preserve coverage of explicitly required legacy enrollment policies.
+            db.execute('INSERT INTO auth_preferences(user_id,authenticator_disabled) VALUES(1,0)');db.commit()
+
             account={'full_name':'Public Requester','email':'new@example.test','office_id':'1','position':'Field Officer','password':'A unique public passphrase!','confirm_password':'A unique public passphrase!','role':'Administrator','status':'Active'}
             _,text,_=visitor.request('register.php',{**account,'csrf':'wrong'})
             check('session token expired' in text,'Registration enforces CSRF')
@@ -48,6 +56,7 @@ with tempfile.TemporaryDirectory(prefix='vrs-auth-') as folder:
             _,text,_=visitor.request('register.php',account)
             check('Request received' in text,'Public registration succeeds')
             uid,role,status,hashed=db.execute('SELECT id,role,status,password_hash FROM users WHERE email=?',(account['email'],)).fetchone()
+            db.execute('INSERT INTO auth_preferences(user_id,authenticator_disabled) VALUES(?,0)',(uid,));db.commit()
             check(role=='Requester' and status=='Pending' and hashed!=account['password'],'Forged role/status ignored and password hashed')
             check(visitor.request('api.php')[0]==401,'Registration does not authenticate')
             _,duplicate,_=visitor.request('register.php',account)
@@ -60,6 +69,11 @@ with tempfile.TemporaryDirectory(prefix='vrs-auth-') as folder:
             _,text,_=admin.request('two-factor.php');secret=re.search(r'<code data-setup-secret>([^<]+)',text)[1]
             _,bad,_=admin.request('two-factor.php',{'action':'enroll','code':'invalid'})
             check('invalid or expired' in bad and not db.execute('SELECT 1 FROM auth_factors WHERE user_id=1').fetchone(),'Enrollment requires a valid code')
+            db.execute("CREATE TRIGGER fail_enrollment BEFORE INSERT ON audit_logs WHEN NEW.action='Authenticator enrolled' BEGIN SELECT RAISE(ABORT,'Test enrollment failure'); END");db.commit()
+            _,text,_=admin.request('two-factor.php',{'action':'enroll','code':totp(secret)})
+            check('database error' in text and not db.execute('SELECT 1 FROM auth_factors WHERE user_id=1').fetchone(),'Failed enrollment rolls back the factor')
+            check(secret in text and 'data-recovery-code' not in text,'Failed enrollment preserves setup key without publishing recovery codes')
+            db.execute('DROP TRIGGER fail_enrollment');db.commit()
             _,text,_=admin.request('two-factor.php');secret,used_code,codes=admin.enroll(text)
             check(admin.request('api.php')[0]==401,'Enrollment requires recovery-code acknowledgement before access')
             _,text,url=admin.request('two-factor.php',{'action':'finish'})
@@ -80,6 +94,12 @@ with tempfile.TemporaryDirectory(prefix='vrs-auth-') as folder:
             check(not url.endswith('index.php') and replay.request('api.php')[0]==401,'Forged finish cannot bypass an existing factor')
             _,text,url=replay.request('two-factor.php',{'action':'verify','code':used_code})
             check('already used' in text and not url.endswith('index.php'),'Authenticator code replay rejected')
+            before_hashes=db.execute('SELECT recovery_hashes FROM auth_factors WHERE user_id=1').fetchone()[0]
+            db.execute("CREATE TRIGGER fail_mfa_login BEFORE INSERT ON audit_logs WHEN NEW.action='Signed in' BEGIN SELECT RAISE(ABORT,'Test MFA completion failure'); END");db.commit()
+            _,text,_=replay.request('two-factor.php',{'action':'verify','code':codes[0]})
+            check('database error' in text and replay.request('api.php')[0]==401,'Failed MFA completion does not sign in')
+            check(db.execute('SELECT recovery_hashes FROM auth_factors WHERE user_id=1').fetchone()[0]==before_hashes,'Failed MFA completion does not consume recovery code')
+            db.execute('DROP TRIGGER fail_mfa_login');db.commit()
             _,_,url=replay.request('two-factor.php',{'action':'verify','code':codes[0]});check(url.endswith('index.php'),'Unused recovery code completes sign-in')
             again=Client(base);again.password('daniel@vrs.local','Demo@12345')
             _,text,url=again.request('two-factor.php',{'action':'verify','code':codes[0]});check('already used' in text and not url.endswith('index.php'),'Used recovery code cannot be replayed in another session')

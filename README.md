@@ -139,7 +139,7 @@ Assignment control checks: open `tests/assignment.html` directly in a browser. T
 
 ### Authenticator settings
 
-Open your profile using your name/avatar in the top bar, then use **Account security** to turn the authenticator on or off. Turning it off requires your current password, removes the enrolled secret and recovery codes, and permits password-only sign-in. Turning it on requires password confirmation followed by a valid code from the displayed QR code or manual setup key. Save the ten new recovery codes before dismissing them. Other password-only sessions are signed out when the authenticator is enabled. First-time accounts still enroll during sign-in by default. The profile shows the actual enrollment status.
+Open your profile using your name/avatar in the top bar, then use **Account security** to turn the authenticator on or off. Turning it off requires your current password, removes the enrolled secret and recovery codes, and permits password-only sign-in. Turning it on requires password confirmation followed by a valid code from the displayed QR code or manual setup key. Save the ten new recovery codes before dismissing them. Other password-only sessions are signed out when the authenticator is enabled. New accounts sign in with their password and can enable two-factor authentication from their profile. Existing enrolled authenticators remain required. The profile shows the actual enrollment status.
 
 ### AI booking assistant
 

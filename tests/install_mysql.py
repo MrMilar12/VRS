@@ -3,7 +3,7 @@ Run: python3 tests/install_mysql.py /path/to/php
 """
 import os, pwd, http.cookiejar, urllib.request, urllib.parse, re, sys, tempfile, shutil, subprocess, time, socket, secrets, json
 from pathlib import Path
-from auth_support import finish_mfa
+from auth_support import finish_mfa, totp
 PHP=sys.argv[1] if len(sys.argv)>1 else 'php'
 ROOT=Path(__file__).resolve().parents[1]
 APACHE='--apache' in sys.argv
@@ -69,6 +69,11 @@ with tempfile.TemporaryDirectory(prefix='vrs-apache-install-' if APACHE else 'vr
                 text,_=request('index.php?page='+page)
                 check('</html>' in text,'MySQL renders '+page)
             request('index.php?page=profile')
+            text,_=request('actions.php',{'action':'factor_start','password':'TemporaryTest!123'})
+            secret=re.search(r'<code data-setup-secret>([^<]+)</code>',text)[1]
+            text,_=request('actions.php',{'action':'factor_enable','code':totp(secret)})
+            check('data-recovery-code' in text,'MySQL enables optional authenticator from profile')
+            request('actions.php',{'action':'factor_done'})
             text,_=request('actions.php',{'action':'factor_disable','password':'TemporaryTest!123'})
             check('Turn on authenticator' in text,'MySQL disables authenticator from profile')
             request('actions.php',{'action':'logout'})
