@@ -119,7 +119,7 @@ This mode uses a disposable application copy under the VRS directory and a tempo
 
 ## Destination search and map
 
-New and edited requisitions use a required address selector: open the place dropdown, type at least three characters, then choose a result to preview its pin on an OpenStreetMap map. The chosen address is saved in the existing destination field. Existing destinations remain selectable; map coordinates are preview-only and a saved address must be searched again to preview its pin.
+New and edited requisitions accept a typed destination, including when place search is unavailable or JavaScript is disabled. Type at least three characters for optional place suggestions, then choose a result to preview its pin on an OpenStreetMap map. The typed or selected address is saved in the destination field. Map coordinates are preview-only and a saved address must be searched again to preview its pin.
 
 Search uses the Photon public service over HTTPS from the browser. It requires internet access and JavaScript; search runs after a typing pause, with per-page caching, request cancellation, a timeout, and at least one second between requests. Map previews contact OpenStreetMap. No API key is required. Photon’s public service has no availability guarantee and is intended for reasonable request volumes; use a private Photon endpoint for higher traffic. Set `address_search_url` in `config/local.php` to an HTTPS Photon-compatible endpoint with browser CORS enabled. See https://github.com/komoot/photon for service documentation.
 

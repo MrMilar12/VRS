@@ -1,7 +1,7 @@
 'use strict';
 document.querySelectorAll('[data-address-picker]').forEach(picker => {
  const input = picker.querySelector('[role="combobox"]');
- const value = picker.querySelector('[name="destination"]');
+ const value = input;
  const list = picker.querySelector('[role="listbox"]');
  const toggle = picker.querySelector('[data-place-toggle]');
  const status = picker.querySelector('[role="status"]');
@@ -63,17 +63,17 @@ document.querySelectorAll('[data-address-picker]').forEach(picker => {
     cache.set(term.toLowerCase(),places);
    }
    if(version!==generation) return;
-   results=places; status.textContent=places.length ? `${places.length} places found. Select a place.` : 'No places found. Try adding a city or country.';
+   results=places; status.textContent=places.length ? `${places.length} places found. Select a place.` : 'No places found. You can use the destination you typed.';
    render();
    if(places.length && !list.hidden) highlight(0);
   } catch(error) {
    if(version!==generation) return;
-   results=[]; status.textContent='Search unavailable. Check your connection and type again to retry.'; render();
+   results=[]; status.textContent='Search unavailable. You can still use the destination you typed.'; render();
   } finally { clearTimeout(timeout); }
  }
  input.addEventListener('input',()=>{
-  const version=++generation; clearTimeout(timer); controller?.abort(); value.value=''; results=[];
-  input.setCustomValidity('Select a place from the dropdown.');
+  const version=++generation; clearTimeout(timer); controller?.abort(); results=[];
+  input.setCustomValidity('');
   map.hidden=true; map.removeAttribute('src'); link.hidden=true; placeholder.hidden=false;
   const term=input.value.trim(); status.textContent=term.length<3?'Type at least 3 characters to find a place.':'Searching places…'; render(); open(true);
   if(term.length>=3) timer=setTimeout(()=>search(term,version),Math.max(450,1000-(Date.now()-lastSearch)));
@@ -93,6 +93,5 @@ document.querySelectorAll('[data-address-picker]').forEach(picker => {
  });
  document.addEventListener('click',event=>{if(!input.contains(event.target)&&!toggle.contains(event.target)&&!list.contains(event.target)) open(false);});
  picker.addEventListener('focusout',event=>{if(!picker.contains(event.relatedTarget)) open(false);});
- input.form.addEventListener('submit',event=>{if(!value.value||input.value!==value.value) {event.preventDefault(); input.setCustomValidity('Select a place from the dropdown.'); input.reportValidity();}});
  render();
 });

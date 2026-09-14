@@ -19,7 +19,7 @@ try{
   $status=($_POST['submit_mode']??'')==='draft'?'Draft':'Pending Administrative Approval';
   $values=[$office,$type,field('preferred_driver',160,false),field('passengers',5000),$start,$end,field('destination',255),field('purpose',5000),isset($_POST['fuel_allocation'])?1:0,$fuel,field('fuel_remarks',1000,false),$status];
   if($id){run('UPDATE requisitions SET office_id=?,vehicle_type=?,preferred_driver=?,passengers=?,start_datetime=?,end_datetime=?,destination=?,purpose=?,fuel_allocation=?,fuel_quantity=?,fuel_remarks=?,status=? WHERE id=?',[...$values,$id]);}
-  else{run('INSERT INTO requisitions(office_id,vehicle_type,preferred_driver,passengers,start_datetime,end_datetime,destination,purpose,fuel_allocation,fuel_quantity,fuel_remarks,status,requester_id,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',[...$values,$user['id'],date('Y-m-d H:i:s')]);$id=(int)$pdo->lastInsertId();run('UPDATE requisitions SET reference=? WHERE id=?',['VR-'.date('Y').'-'.str_pad((string)$id,4,'0',STR_PAD_LEFT),$id]);}
+  else{run('INSERT INTO requisitions(office_id,vehicle_type,preferred_driver,passengers,start_datetime,end_datetime,destination,purpose,fuel_allocation,fuel_quantity,fuel_remarks,status,requester_id,created_at,reference) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',[...$values,$user['id'],date('Y-m-d H:i:s'),'TMP-'.bin2hex(random_bytes(16))]);$id=(int)$pdo->lastInsertId();run('UPDATE requisitions SET reference=? WHERE id=?',['VR-'.date('Y').'-'.str_pad((string)$id,4,'0',STR_PAD_LEFT),$id]);}
   if($status==='Pending Administrative Approval')foreach(all("SELECT id FROM users WHERE status='Active' AND role='Administrator'") as $reviewer)run('INSERT INTO notifications(user_id,message,requisition_id,created_at) VALUES(?,?,?,?)',[$reviewer['id'],'A requisition is awaiting administrator approval.',$id,date('Y-m-d H:i:s')]);
   if(($_POST['return_to']??'')==='index.php?page=assistant')unset($_SESSION['booking_chat']);
   audit('Requisition saved','Request #'.$id.' · '.$status);$target='index.php?page=request&id='.$id;flash($status==='Draft'?'Draft saved.':'Requisition submitted for administrator approval.');
@@ -94,5 +94,10 @@ try{
  }elseif($action==='read_notifications'){run('UPDATE notifications SET is_read=1 WHERE user_id=?',[$user['id']]);$target='index.php?page=notifications';flash('Notifications marked as read.');}
  else throw new RuntimeException('Unknown action.');
  finish_transaction(true);$transaction=false;
-}catch(Throwable $e){if($uploaded&&is_file($uploaded))unlink($uploaded);if($transaction)finish_transaction(false);flash($e instanceof PDOException?'This record could not be saved. Check for duplicate identifiers and valid linked records.':$e->getMessage(),'error');$_SESSION['old_input']=array_diff_key($_POST,array_flip(['password','confirmation_password','csrf','code']));$back=$_POST['return_to']??'';if(is_string($back)&&preg_match('/^index\.php(?:\?[a-zA-Z0-9_=&%-]*)?$/D',$back))$target=$back;}
+}catch(Throwable $e){if($uploaded&&is_file($uploaded))unlink($uploaded);if($transaction)finish_transaction(false);if($e instanceof PDOException){
+ $errorReference=bin2hex(random_bytes(8));
+ error_log('VRS save '.$errorReference.': action='.($action??'unknown').' SQLSTATE='.$e->getCode().' driver_code='.($e->errorInfo[1]??'unknown'));
+ $message='The database could not save this record. Contact your administrator with reference '.$errorReference.'. Your input has been kept for correction.';
+}else{$message=$e->getMessage();}
+flash($message,'error');$_SESSION['old_input']=array_diff_key($_POST,array_flip(['password','confirmation_password','csrf','code']));$back=$_POST['return_to']??'';if(is_string($back)&&preg_match('/^index\.php(?:\?[a-zA-Z0-9_=&%-]*)?$/D',$back))$target=$back;}
 redirect($target);

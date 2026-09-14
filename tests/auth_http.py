@@ -30,7 +30,7 @@ class Client:
         return secret,code,codes
 with tempfile.TemporaryDirectory(prefix='vrs-auth-') as folder:
     folder=Path(folder);app=folder/'app';sessions=folder/'sessions';sessions.mkdir()
-    shutil.copytree(ROOT,app,ignore=shutil.ignore_patterns('.git','*.sqlite','*.sqlite-journal','local.php','auth.key','__pycache__'))
+    shutil.copytree(ROOT,app,ignore=shutil.ignore_patterns('.git','*.sqlite','*.sqlite-journal','local.php','ollama.local.php','auth.key','__pycache__'))
     with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
     with open(folder/'server.log','w+') as log:
         proc=subprocess.Popen([PHP,'-d','session.save_path='+str(sessions),'-S',f'127.0.0.1:{port}','router.php'],cwd=app,stdout=log,stderr=log)

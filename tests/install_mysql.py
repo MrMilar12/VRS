@@ -3,6 +3,7 @@ Run: python3 tests/install_mysql.py /path/to/php
 """
 import os, pwd, http.cookiejar, urllib.request, urllib.parse, re, sys, tempfile, shutil, subprocess, time, socket, secrets, json
 from pathlib import Path
+from auth_support import finish_mfa
 PHP=sys.argv[1] if len(sys.argv)>1 else 'php'
 ROOT=Path(__file__).resolve().parents[1]
 APACHE='--apache' in sys.argv
@@ -12,7 +13,7 @@ def check(value,label):
     print('PASS:',label)
 with tempfile.TemporaryDirectory(prefix='vrs-apache-install-' if APACHE else 'vrs-install-',dir=ROOT if APACHE else None) as folder:
     app=Path(folder)/'app'
-    shutil.copytree(ROOT,app,ignore=shutil.ignore_patterns('.git','*.sqlite','*.sqlite-journal','local.php','__pycache__','vrs-apache-install-*'))
+    shutil.copytree(ROOT,app,ignore=shutil.ignore_patterns('.git','*.sqlite','*.sqlite-journal','local.php','ollama.local.php','__pycache__','vrs-apache-install-*'))
     sock=socket.socket();sock.bind(('127.0.0.1',0));port=sock.getsockname()[1];sock.close()
     base=f'http://localhost/VRS/{Path(folder).name}/app/' if APACHE else f'http://127.0.0.1:{port}/'
     if APACHE:
@@ -62,10 +63,18 @@ with tempfile.TemporaryDirectory(prefix='vrs-apache-install-' if APACHE else 'vr
             text,url=request('index.php')
             check('login.php' in url,'Installer demo session cleared')
             text,url=request('login.php',{'email':'install@example.test','password':'TemporaryTest!123'})
+            text,url=finish_mfa(request,'install@example.test',text,url)
             check(url.endswith('index.php') and 'Installation Admin' in text,'New administrator can sign in')
             for page in ['vehicles','users','reports','settings','audit']:
                 text,_=request('index.php?page='+page)
                 check('</html>' in text,'MySQL renders '+page)
+            # Exercise hosted schemas that require the reference at insertion.
+            strict_schema='<?php $c=require "config/local.php"; $p=new PDO($c["dsn"],$c["username"],$c["password"],[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]); $p->exec("ALTER TABLE requisitions MODIFY reference VARCHAR(40) NOT NULL UNIQUE");'
+            subprocess.run([PHP],input=strict_schema,text=True,cwd=app,check=True)
+            request('index.php?page=create')
+            for index in range(2):
+                text,url=request('actions.php',{'action':'save_request','return_to':'index.php?page=create','vehicle_type':'Van','passengers':'Test Passenger','start_datetime':'2026-12-20T08:00','end_datetime':'2026-12-20T17:00','destination':'Manual test destination','purpose':'MySQL save regression '+str(index),'fuel_quantity':'0','submit_mode':'submit'})
+                check('page=request' in url and 'MySQL save regression '+str(index) in text,'MySQL saves requisition with a required unique reference')
             text,_=request('setup.php',data)
             check('Installation is locked' in text,'Repeat installation blocked')
             # Verify nonempty database refusal in a separate unconfigured copy.

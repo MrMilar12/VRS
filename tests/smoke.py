@@ -37,6 +37,9 @@ def check(value,label):
     print('PASS:',label)
 with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
     app=Path(folder)/'app';shutil.copytree(ROOT,app,ignore=shutil.ignore_patterns('.git','*.sqlite','*.sqlite-journal','local.php','ollama.local.php','auth.key','__pycache__'))
+    # Some hosted schemas require a reference on INSERT; exercise that stricter contract.
+    schema=app/'database/schema.sqlite.sql'
+    schema.write_text(schema.read_text().replace('reference VARCHAR(40) UNIQUE','reference VARCHAR(40) NOT NULL UNIQUE'))
     sock=socket.socket();sock.bind(('127.0.0.1',0));port=sock.getsockname()[1];sock.close()
     # Keep integration checks offline, regardless of the configured default AI provider.
     with (app/'config/system.php').open('r+') as settings:
@@ -105,6 +108,10 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
             check('reset' in assistant_post({'mode':'reset'}),'Assistant supports clearing conversation')
             day=(datetime.now()-timedelta(days=5)).strftime('%Y-%m-%d')
             data={'action':'save_request','vehicle_type':'SUV','passengers':'Ana Flores, Test Guest','start_datetime':day+'T08:00','end_datetime':day+'T12:00','destination':'HTTP Integration Test','purpose':'Complete workflow test','fuel_quantity':'5','office_id':'3','submit_mode':'submit'}
+            for attempt in range(2):
+                text,url=requester.post('actions.php',{**data,'id':'','return_to':'index.php?page=create','end_datetime':day+'T07:00'})
+                check('Estimated return must be after departure.' in text and 'New requisition' in text and 'HTTP Integration Test' in text,'Failed new request keeps input for correction')
+                check('value="index.php?page=create"' in text and 'page=create&amp;id=0' not in text,'Retry form does not gain a nonexistent record ID')
             text,url=requester.post('actions.php',data);check('id=v1_' in url and 'HTTP Integration Test' in text,'Create requisition with encrypted redirect')
             with sqlite3.connect(app/'storage/demo.sqlite') as db:
                 rid=str(db.execute("SELECT id FROM requisitions WHERE destination='HTTP Integration Test' ORDER BY id DESC").fetchone()[0])

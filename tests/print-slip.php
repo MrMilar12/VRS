@@ -1,6 +1,9 @@
 <?php
 // Isolated rendering checks; no application database or authentication changes.
 require __DIR__.'/../includes/functions.php';
+require __DIR__.'/../includes/url-security.php';
+function auth_key(): string {return str_repeat('p',32);}
+$user=['id'=>1];
 $r=['id'=>1,'reference'=>'VR-2026-0001','created_at'=>'2026-09-09 08:00:00','requester_name'=>'Daniel Milar','position'=>'Administrative Assistant','office_name'=>'General Services Office','driver_name'=>'Juan Dela Cruz','passengers'=>'Maria Santos, Pedro Reyes','vehicle_type'=>'Van','model'=>'Toyota Hiace','plate'=>'SAA 1234','start_datetime'=>'2026-09-10 08:00:00','end_datetime'=>'2026-09-10 17:00:00','destination'=>'Quezon City Hall, Metro Manila, Philippines','purpose'=>'Attend the inter-agency coordination meeting.','fuel_allocation'=>1,'fuel_quantity'=>20,'fuel_remarks'=>'Official travel'];
 $sign=['Supervisor'=>['full_name'=>'Maria Supervisor','created_at'=>'2026-09-09 09:00:00'],'Administrative'=>['full_name'=>'Jose Administrator','created_at'=>'2026-09-09 10:00:00']];
 $m=null;

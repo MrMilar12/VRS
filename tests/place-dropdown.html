@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en"><meta charset="utf-8"><title>Place dropdown regression checks</title>
 <form><div data-address-picker data-search-url="https://example.invalid/api/">
-<input role="combobox" required aria-controls="options" aria-expanded="false">
-<input type="hidden" name="destination"><button type="button" data-place-toggle>Places</button>
+<input name="destination" role="combobox" required aria-controls="options" aria-expanded="false">
+<button type="button" data-place-toggle>Places</button>
 <div id="options" role="listbox" hidden></div><p role="status"></p>
 <div data-address-map hidden></div><div data-map-placeholder></div><a data-map-link hidden></a>
 </div><button type="button" id="outside">Outside</button></form><pre id="result">RUNNING</pre>
@@ -38,7 +38,8 @@ window.fetch=async()=>{
   input.click();document.querySelector('#outside').click();check(list.hidden,'Outside click dismisses dropdown');
   input.click();key('Tab');check(list.hidden,'Tab dismisses dropdown');
   input.value='Unknown';input.dispatchEvent(new Event('input'));
-  check(!value.value&&!input.checkValidity(),'Unselected text cannot submit');
+  check(value.value==='Unknown'&&input.checkValidity(),'Manually entered destinations pass validation');
+  check(new FormData(input.form).get('destination')==='Unknown','Typed destination is included in submitted form data');
   failSearch=true;await wait(1600);
   check(document.querySelector('[role=status]').textContent.includes('unavailable'),'Failed search displays an error');
   failSearch=false;input.value='Quezon';input.dispatchEvent(new Event('input'));await wait(1600);
