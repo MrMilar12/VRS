@@ -18,7 +18,9 @@ document.addEventListener('submit',async event=>{
  const buttons=[...form.querySelectorAll('button')].map(button=>[button,button.disabled]);
  buttons.forEach(([button])=>button.disabled=true);form.dataset.saving='true';form.setAttribute('aria-busy','true');
  try{
-  const response=await fetch(form.action,{method:'POST',body:data,credentials:'same-origin',headers:{Accept:'application/json'}});
+  // A control named "action" shadows the form.action DOM property.
+  const endpoint=new URL(form.getAttribute('action')||location.href,document.baseURI);
+  const response=await fetch(endpoint.href,{method:'POST',body:data,credentials:'same-origin',headers:{Accept:'application/json'}});
   if(response.redirected||!response.headers.get('content-type')?.includes('application/json'))throw new Error('The server interrupted the save or returned an unexpected page. Your entries are still here. Open VRS in another tab to check your sign-in and requisition list before trying again.');
   const result=await response.json();
   if(!response.ok)throw new Error(result.error||'The requisition could not be saved. Your entries are still here.');
