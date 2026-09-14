@@ -11,6 +11,12 @@ if($_SERVER['REQUEST_METHOD']==='POST')try{
  $_SESSION['auth_pending']=['id'=>$account['id'],'credential'=>hash('sha256',$account['password_hash']),'expires'=>time()+600];$_SESSION['csrf']=bin2hex(random_bytes(32));
  if(auth_is_disabled((int)$account['id'])){auth_complete($account,false);redirect('index.php');}
  redirect('two-factor.php');
-}catch(Throwable $e){$error=$e instanceof PDOException?'Sign in is temporarily unavailable.':$e->getMessage();}
+}catch(Throwable $e){
+ if($e instanceof PDOException){
+  $reference=bin2hex(random_bytes(8));$code=$e->errorInfo[1]??'unknown';
+  error_log('VRS sign-in '.$reference.': SQLSTATE='.$e->getCode().' driver_code='.$code);
+  $error='Sign in could not finish because of a database error. Reference '.$reference.' (SQLSTATE '.$e->getCode().', code '.$code.').';
+ }else{$error=$e->getMessage();}
+}
 $organization=setting('organization');
 require __DIR__.'/includes/login-view.php';

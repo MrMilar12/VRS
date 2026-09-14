@@ -66,8 +66,15 @@ function auth_pending_account(): ?array {
 }
 function auth_complete(array $account,bool $mfa=true): void {
  global $user;
- session_regenerate_id(true);$_SESSION=['database_identity'=>$_SESSION['database_identity'],'csrf'=>bin2hex(random_bytes(32)),'user_id'=>$account['id'],'auth_level'=>$mfa?'mfa':'password','auth_started'=>time(),'auth_seen'=>time(),'auth_credential'=>hash('sha256',$account['password_hash'])];
- $user=$account;auth_clear_limit('password-account',strtolower($account['email']));auth_clear_limit('factor',(string)$account['id']);audit('Signed in',$mfa?'Password and second factor verified':'Password verified; authenticator turned off');
+ // Do not publish an authenticated session until all database work succeeds.
+ $csrf=bin2hex(random_bytes(32));lock_transaction();
+ try{
+  auth_clear_limit('password-account',strtolower($account['email']));auth_clear_limit('factor',(string)$account['id']);
+  run('INSERT INTO audit_logs(user_id,action,details,created_at) VALUES(?,?,?,?)',[$account['id'],'Signed in',$mfa?'Password and second factor verified':'Password verified; authenticator turned off',date('Y-m-d H:i:s')]);
+  finish_transaction(true);
+ }catch(Throwable $e){finish_transaction(false);throw $e;}
+ session_regenerate_id(true);$_SESSION=['database_identity'=>$_SESSION['database_identity'],'csrf'=>$csrf,'user_id'=>$account['id'],'auth_level'=>$mfa?'mfa':'password','auth_started'=>time(),'auth_seen'=>time(),'auth_credential'=>hash('sha256',$account['password_hash'])];
+ $user=$account;
 }
 function auth_verify_factor(int $id,string $code): bool {
  global $pdo;$transaction=false;

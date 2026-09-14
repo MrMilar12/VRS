@@ -68,6 +68,12 @@ with tempfile.TemporaryDirectory(prefix='vrs-apache-install-' if APACHE else 'vr
             for page in ['vehicles','users','reports','settings','audit']:
                 text,_=request('index.php?page='+page)
                 check('</html>' in text,'MySQL renders '+page)
+            request('index.php?page=profile')
+            text,_=request('actions.php',{'action':'factor_disable','password':'TemporaryTest!123'})
+            check('Turn on authenticator' in text,'MySQL disables authenticator from profile')
+            request('actions.php',{'action':'logout'})
+            text,url=request('login.php',{'email':'install@example.test','password':'TemporaryTest!123'})
+            check(url.endswith('index.php') and 'Installation Admin' in text,'First MySQL login after disabling authenticator succeeds')
             # Exercise hosted schemas that require the reference at insertion.
             strict_schema='<?php $c=require "config/local.php"; $p=new PDO($c["dsn"],$c["username"],$c["password"],[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]); $p->exec("ALTER TABLE requisitions MODIFY reference VARCHAR(40) NOT NULL UNIQUE");'
             subprocess.run([PHP],input=strict_schema,text=True,cwd=app,check=True)
