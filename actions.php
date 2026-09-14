@@ -1,8 +1,11 @@
 <?php
 require __DIR__.'/includes/bootstrap.php';
+$jsonSave=($_POST['action']??'')==='save_request'&&str_contains($_SERVER['HTTP_ACCEPT']??'','application/json');
+if($jsonSave)header('Content-Type: application/json; charset=utf-8');
+if(!$user&&$jsonSave){http_response_code(401);echo json_encode(['error'=>'Your session expired. Sign in in another tab, then reload this form before submitting.']);exit;}
 if(!$user)redirect('login.php');
-if($_SERVER['REQUEST_METHOD']!=='POST'){http_response_code(405);exit('POST required');}
-$target='index.php';$transaction=false;$uploaded=null;
+if($_SERVER['REQUEST_METHOD']!=='POST'){http_response_code(405);header('Allow: POST');exit('POST required');}
+$target='index.php';$transaction=false;$uploaded=null;$saveError=null;
 try{
  check_csrf();$action=field('action',40);$overrideRequested=$action==='override_approve';
  if($overrideRequested){require_role('Administrator');$action='approve';}
@@ -22,7 +25,7 @@ try{
   else{run('INSERT INTO requisitions(office_id,vehicle_type,preferred_driver,passengers,start_datetime,end_datetime,destination,purpose,fuel_allocation,fuel_quantity,fuel_remarks,status,requester_id,created_at,reference) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',[...$values,$user['id'],date('Y-m-d H:i:s'),'TMP-'.bin2hex(random_bytes(16))]);$id=(int)$pdo->lastInsertId();run('UPDATE requisitions SET reference=? WHERE id=?',['VR-'.date('Y').'-'.str_pad((string)$id,4,'0',STR_PAD_LEFT),$id]);}
   if($status==='Pending Administrative Approval')foreach(all("SELECT id FROM users WHERE status='Active' AND role='Administrator'") as $reviewer)run('INSERT INTO notifications(user_id,message,requisition_id,created_at) VALUES(?,?,?,?)',[$reviewer['id'],'A requisition is awaiting administrator approval.',$id,date('Y-m-d H:i:s')]);
   if(($_POST['return_to']??'')==='index.php?page=assistant')unset($_SESSION['booking_chat']);
-  audit('Requisition saved','Request #'.$id.' · '.$status);$target='index.php?page=request&id='.$id;flash($status==='Draft'?'Draft saved.':'Requisition submitted for administrator approval.');
+  audit('Requisition saved','Request #'.$id.' · '.$status);unset($_SESSION['old_input']);$target='index.php?page=request&id='.$id;flash($status==='Draft'?'Draft saved.':'Requisition submitted for administrator approval.');
  }elseif(in_array($action,['approve','reject','return_correction','cancel','dispatch','receive','complete'])){
   $id=number('id',1);lock_record('requisitions',$id);$r=get_request($id);$target='index.php?page=request&id='.$id;
   $remark=field('remarks',2000,false);$new='';
@@ -97,7 +100,21 @@ try{
 }catch(Throwable $e){if($uploaded&&is_file($uploaded))unlink($uploaded);if($transaction)finish_transaction(false);if($e instanceof PDOException){
  $errorReference=bin2hex(random_bytes(8));
  error_log('VRS save '.$errorReference.': action='.($action??'unknown').' SQLSTATE='.$e->getCode().' driver_code='.($e->errorInfo[1]??'unknown'));
- $message='The database could not save this record. Contact your administrator with reference '.$errorReference.'. Your input has been kept for correction.';
+ $reason=match((int)($e->errorInfo[1]??0)){
+  1062=>'A record identifier already exists.',
+  1451,1452=>'A linked record is missing or cannot be changed.',
+  1048,1364=>'The database requires a field that this save did not supply.',
+  1054,1146=>'The hosted database schema does not match the application.',
+  1406=>'A value exceeds the field length allowed by the database.',
+  1205,1213=>'The database is busy. Please try again shortly.',
+  default=>'The database could not save this record.'
+ };
+ $message=$reason.' Reference '.$errorReference.' (SQLSTATE '.$e->getCode().', code '.($e->errorInfo[1]??'unknown').'). Your input has been kept for correction.';
 }else{$message=$e->getMessage();}
-flash($message,'error');$_SESSION['old_input']=array_diff_key($_POST,array_flip(['password','confirmation_password','csrf','code']));$back=$_POST['return_to']??'';if(is_string($back)&&preg_match('/^index\.php(?:\?[a-zA-Z0-9_=&%-]*)?$/D',$back))$target=$back;}
+$saveError=$message;flash($message,'error');$_SESSION['old_input']=array_diff_key($_POST,array_flip(['password','confirmation_password','csrf','code']));$back=$_POST['return_to']??'';if(is_string($back)&&preg_match('/^index\.php(?:\?[a-zA-Z0-9_=&%-]*)?$/D',$back))$target=$back;}
+if($jsonSave){
+ if($saveError!==null){unset($_SESSION['flash']);http_response_code(422);echo json_encode(['error'=>$saveError]);}
+ else echo json_encode(['redirect'=>secure_record_url($target)]);
+ exit;
+}
 redirect($target);

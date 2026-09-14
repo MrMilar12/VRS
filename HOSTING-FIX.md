@@ -17,4 +17,6 @@ The private hosting package includes the application code and `config/ollama.loc
 - Submit with a return time earlier than departure. Correct the time in the restored form and submit again; the form should remain a new request until saving succeeds.
 - Confirm the saved requisition has a reference such as `VR-2026-0001` and appears in the requisition list.
 
-If saving fails, use the error reference displayed on the page to locate the corresponding `VRS save` entry in the hosting PHP error log. That entry records the database error codes; the page keeps the entered fields for correction. The older “Check for duplicate identifiers” text means the old `actions.php` is still being served.
+If saving fails, use the error reference displayed on the page to locate the corresponding `VRS save` entry in the hosting PHP error log. That entry records the database error codes; the page keeps the entered fields for correction. Database failures also display SQLSTATE and driver codes directly beside the form. The older “Check for duplicate identifiers” text means the old `actions.php` is still being served.
+
+Requisition saves now use POST requests that return JSON, keeping validation and database errors beside the entered fields. Upload both `actions.php` and `assets/js/app.js` together. If the hosting browser check returns HTML or a redirect, the form retains its entries and asks you to check your sign-in and saved requests before retrying. It never changes a save into a GET request or automatically resubmits an uncertain save.

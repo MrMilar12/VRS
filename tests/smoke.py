@@ -112,6 +112,25 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
                 text,url=requester.post('actions.php',{**data,'id':'','return_to':'index.php?page=create','end_datetime':day+'T07:00'})
                 check('Estimated return must be after departure.' in text and 'New requisition' in text and 'HTTP Integration Test' in text,'Failed new request keeps input for correction')
                 check('value="index.php?page=create"' in text and 'page=create&amp;id=0' not in text,'Retry form does not gain a nonexistent record ID')
+            def save_json(payload):
+                req=urllib.request.Request(base+'/actions.php',urllib.parse.urlencode({'csrf':requester.token,**payload}).encode(),headers={'Accept':'application/json'})
+                try:
+                    response=requester.http.open(req)
+                except urllib.error.HTTPError as error:
+                    response=error
+                with response:
+                    check(response.geturl().endswith('actions.php'),'JSON save does not redirect away from entered form')
+                    return response.status,json.loads(response.read())
+            code,result=save_json({**data,'destination':''})
+            check(code==422 and 'destination' in result['error'],'JSON validation returns a field error')
+            code,result=save_json({**data,'csrf':'invalid'})
+            check(code==422 and 'session token expired' in result['error'],'JSON saves retain CSRF protection')
+            code,result=save_json({**data,'destination':'JSON manual destination','purpose':'JSON save regression','submit_mode':'draft'})
+            check(code==200 and 'id=v1_' in result['redirect'],'JSON save returns protected record link')
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                check(db.execute("SELECT status FROM requisitions WHERE purpose='JSON save regression'").fetchone()[0]=='Draft','JSON save preserves Save as draft choice')
+            _,fresh_form,_=requester.get('index.php?page=create')
+            check('JSON manual destination' not in fresh_form,'Successful save clears stale recovery input')
             text,url=requester.post('actions.php',data);check('id=v1_' in url and 'HTTP Integration Test' in text,'Create requisition with encrypted redirect')
             with sqlite3.connect(app/'storage/demo.sqlite') as db:
                 rid=str(db.execute("SELECT id FROM requisitions WHERE destination='HTTP Integration Test' ORDER BY id DESC").fetchone()[0])

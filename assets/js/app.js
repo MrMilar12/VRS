@@ -3,3 +3,29 @@ document.querySelector('[data-toggle-sidebar]')?.addEventListener('click',()=>do
 document.querySelectorAll('form[data-confirm]').forEach(form=>form.addEventListener('submit',event=>{if(!confirm(form.dataset.confirm))event.preventDefault();}));
 document.querySelectorAll('[data-close-dialog]').forEach(button=>button.addEventListener('click',()=>button.closest('dialog').close()));
 document.querySelectorAll('input[name="start_datetime"]').forEach(input=>input.addEventListener('change',()=>{const end=input.form.querySelector('input[name="end_datetime"]');if(end)end.min=input.value;}));
+
+// Keep trip details on screen if validation, the database, or hosting rejects a save.
+document.addEventListener('submit',async event=>{
+ const form=event.target;
+ if(!(form instanceof HTMLFormElement)||!form.matches('.request-form,[data-booking-review]')||form.elements.namedItem('action')?.value!=='save_request'||event.defaultPrevented)return;
+ event.preventDefault();
+ if(form.dataset.saving==='true')return;
+ const data=new FormData(form),submitter=event.submitter;
+ if(submitter?.name)data.set(submitter.name,submitter.value);
+ let notice=form.querySelector('[data-save-status]');
+ if(!notice){notice=document.createElement('p');notice.dataset.saveStatus='';notice.className='alert';notice.setAttribute('role','status');notice.tabIndex=-1;const anchor=form.querySelector('.form-actions')||form.querySelector('button[type=submit]');if(anchor)anchor.before(notice);else form.prepend(notice);}
+ notice.textContent='Saving your requisition…';notice.className='alert';
+ const buttons=[...form.querySelectorAll('button')].map(button=>[button,button.disabled]);
+ buttons.forEach(([button])=>button.disabled=true);form.dataset.saving='true';form.setAttribute('aria-busy','true');
+ try{
+  const response=await fetch(form.action,{method:'POST',body:data,credentials:'same-origin',headers:{Accept:'application/json'}});
+  if(response.redirected||!response.headers.get('content-type')?.includes('application/json'))throw new Error('The server interrupted the save or returned an unexpected page. Your entries are still here. Open VRS in another tab to check your sign-in and requisition list before trying again.');
+  const result=await response.json();
+  if(!response.ok)throw new Error(result.error||'The requisition could not be saved. Your entries are still here.');
+  if(typeof result.redirect!=='string')throw new Error('The save could not be confirmed. Check your requisition list before trying again.');
+  const target=new URL(result.redirect,location.href);
+  if(target.origin!==location.origin)throw new Error('The save returned an unexpected destination. Check your requisition list before trying again.');
+  location.assign(target.href);
+ }catch(error){notice.textContent=error instanceof TypeError?'The connection was interrupted. Your entries are still here. Check your requisition list before trying again.':error.message;notice.className='alert error';notice.focus();}
+ finally{buttons.forEach(([button,disabled])=>button.disabled=disabled);delete form.dataset.saving;form.removeAttribute('aria-busy');}
+});
