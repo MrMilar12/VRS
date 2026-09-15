@@ -17,3 +17,4 @@ try{
  foreach(['turnaround_minutes'=>'30','organization'=>'Government Workspace','supervisor_signatory'=>'Immediate Supervisor','admin_signatory'=>'Administrative Officer'] as $k=>$v)$db->prepare('INSERT INTO system_settings(setting_key,setting_value) VALUES(?,?)')->execute([$k,$v]);
  $db->prepare('INSERT INTO audit_logs(user_id,action,details,created_at) VALUES(?,?,?,?)')->execute([1,'System installed','MySQL installation completed',date('Y-m-d H:i:s')]);$db->commit();echo "\nInstallation complete. Sign in at login.php with your new account.\n";
 }catch(Throwable $e){if(isset($db)&&$db->inTransaction())$db->rollBack();fwrite(STDERR,'Installation failed: '.$e->getMessage()."\n");exit(1);}
+ bgs

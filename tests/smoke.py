@@ -125,10 +125,11 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
             check(code==422 and 'destination' in result['error'],'JSON validation returns a field error')
             code,result=save_json({**data,'csrf':'invalid'})
             check(code==422 and 'session token expired' in result['error'],'JSON saves retain CSRF protection')
-            code,result=save_json({**data,'destination':'JSON manual destination','purpose':'JSON save regression','submit_mode':'draft'})
+            code,result=save_json({**data,'destination':'JSON manual destination','vehicle_type':'Motorcycle','purpose':'JSON save regression','submit_mode':'draft'})
             check(code==200 and 'id=v1_' in result['redirect'],'JSON save returns protected record link')
             with sqlite3.connect(app/'storage/demo.sqlite') as db:
                 check(db.execute("SELECT status FROM requisitions WHERE purpose='JSON save regression'").fetchone()[0]=='Draft','JSON save preserves Save as draft choice')
+                check(db.execute("SELECT vehicle_type FROM requisitions WHERE purpose='JSON save regression'").fetchone()[0]=='Motorcycle','Motorcycle requisition saves successfully')
             _,fresh_form,_=requester.get('index.php?page=create')
             check('JSON manual destination' not in fresh_form,'Successful save clears stale recovery input')
             text,url=requester.post('actions.php',data);check('id=v1_' in url and 'HTTP Integration Test' in text,'Create requisition with encrypted redirect')

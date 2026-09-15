@@ -17,7 +17,7 @@ try{
   $id=(int)($_POST['id']??0);$old=$id?get_request($id):null;
   if($old){lock_record('requisitions',$id);$old=get_request($id);if((int)$old['requester_id']!==(int)$user['id']||!in_array($old['status'],['Draft','Returned for Correction']))throw new RuntimeException('Only your drafts and returned requests can be edited.');}
   $start=datetime_value('start_datetime');$end=datetime_value('end_datetime');if($end<=$start)throw new RuntimeException('Estimated return must be after departure.');
-  $office=(int)$user['office_id'];if(!one("SELECT id FROM offices WHERE id=? AND status='Active'",[$office]))throw new RuntimeException('Your office is inactive. Contact your administrator.');$type=field('vehicle_type',40);if(!in_array($type,['Van','MPV','SUV','Pickup','Sedan','Bus']))throw new RuntimeException('Invalid vehicle type.');
+  $office=(int)$user['office_id'];if(!one("SELECT id FROM offices WHERE id=? AND status='Active'",[$office]))throw new RuntimeException('Your office is inactive. Contact your administrator.');$type=field('vehicle_type',40);if(!in_array($type,['Van','MPV','SUV','Pickup','Sedan','Bus','Motorcycle']))throw new RuntimeException('Invalid vehicle type.');
   $fuel=filter_var($_POST['fuel_quantity']??0,FILTER_VALIDATE_FLOAT);if($fuel===false||$fuel<0||$fuel>10000)throw new RuntimeException('Enter a valid fuel quantity.');
   $status=($_POST['submit_mode']??'')==='draft'?'Draft':'Pending Administrative Approval';
   $values=[$office,$type,field('preferred_driver',160,false),field('passengers',5000),$start,$end,field('destination',255),field('purpose',5000),isset($_POST['fuel_allocation'])?1:0,$fuel,field('fuel_remarks',1000,false),$status];
