@@ -133,6 +133,10 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
             _,fresh_form,_=requester.get('index.php?page=create')
             check('JSON manual destination' not in fresh_form,'Successful save clears stale recovery input')
             text,url=requester.post('actions.php',data);check('id=v1_' in url and 'HTTP Integration Test' in text,'Create requisition with encrypted redirect')
+            code,tracked,_=requester.get('index.php?page=requisitions&q=HTTP+Integration+Test')
+            check(code==200 and 'tracking-card' in tracked and 'Awaiting administrator review.' in tracked and 'HTTP Integration Test' in tracked,'Tracking search renders matching request cards and progress')
+            code,tracked,_=requester.get('index.php?page=requisitions&q=does-not-exist-12345')
+            check(code==200 and 'No matching slips' in tracked,'Tracking search has a useful empty state')
             with sqlite3.connect(app/'storage/demo.sqlite') as db:
                 rid=str(db.execute("SELECT id FROM requisitions WHERE destination='HTTP Integration Test' ORDER BY id DESC").fetchone()[0])
             check('Pending Administrative Approval' in text and 'Administrative Office' in text,'Office binding and initial status')

@@ -221,3 +221,22 @@ a.profile{color:inherit;text-decoration:none;border-radius:8px}a.profile:focus-v
 }
 
 .developer-center{max-width:1000px}.developer-status{padding:16px 18px;border:1px solid var(--border);border-radius:12px;font-weight:600;background:var(--green-light);color:var(--ink)}.developer-status.has-update{border-color:#779f50}.developer-blockers{padding-left:22px;line-height:1.8;color:var(--text)}.developer-blockers:empty{display:none}.developer-update-form{max-width:640px}.developer-update-form input{display:block;width:100%;max-width:400px;margin-top:8px}.developer-center [hidden]{display:none!important}.developer-center details{border:1px solid var(--border);border-radius:12px;padding:16px}.developer-center summary{cursor:pointer;font-weight:600}.developer-center details ul{max-height:300px;overflow:auto;padding-left:20px;line-height:1.8;overflow-wrap:anywhere}.developer-center dd{font-family:ui-monospace,monospace;font-size:14px}.developer-center .button-row{flex-wrap:wrap}
+
+/* Slip tracking stays visible and gets its own row on smaller screens. */
+.header-tracking-search{display:flex;align-items:center;flex:1 1 260px;max-width:340px;min-width:180px;border:1px solid var(--border);border-radius:10px;background:var(--white);overflow:hidden}
+.header-tracking-search input{width:100%;min-width:0;border:0;background:transparent;color:var(--ink);padding:11px 12px;outline-offset:-3px}
+.header-tracking-search button{display:flex;align-items:center;justify-content:center;flex:0 0 44px;min-height:44px;border:0;background:transparent;color:var(--ink)}
+.header-tracking-search:focus-within{outline:2px solid var(--green);outline-offset:2px}
+.header-tracking-search button:hover{background:var(--green-light)}
+@media screen and (max-width:1350px){.topbar{height:auto;min-height:82px;flex-wrap:wrap;padding-top:12px;padding-bottom:12px;gap:12px}.header-tracking-search{order:3;flex:1 0 100%;max-width:none;min-width:0}.topbar .breadcrumb{flex:1;min-width:0}.topbar .breadcrumb strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.topbar .top-actions{flex-shrink:0}}
+@media screen and (max-width:720px){.header-tracking-search input{font-size:16px}.topbar .breadcrumb>span{display:none}.topbar .breadcrumb{gap:6px}.topbar .top-actions{gap:6px}}
+@media screen and (max-width:400px){.topbar .breadcrumb{width:auto}.topbar .top-actions{width:auto}.topbar .theme-switch button{padding:6px}.topbar .top-actions{gap:3px}}
+
+/* Reference search: a clear input and a distinct submit control. */
+.header-tracking-search{padding:4px;border-radius:14px;background:var(--white);border-color:#bccdbf;box-shadow:0 2px 8px #23433306;gap:4px}
+.header-tracking-search input{padding:10px 12px;font-size:13px;border-radius:9px;min-height:40px}
+.header-tracking-search button{flex-basis:40px;min-height:40px;border-radius:10px;background:#254d3e;color:#fff}
+.header-tracking-search button:hover{background:#17382c;color:#fff}
+.header-tracking-search:focus-within{outline:3px solid #a9c5b2;outline-offset:2px}
+@media screen{html[data-theme=dark] .header-tracking-search{border-color:#617957}html[data-theme=dark] .header-tracking-search button{background:#b1d18d;color:#192c17}html[data-theme=dark] .header-tracking-search button:hover{background:#c5e3a5}}
+@media(max-width:720px){.header-tracking-search input{font-size:16px}}
