@@ -95,3 +95,11 @@
  .auth-form{margin-top:24px}.auth-input{margin-bottom:18px}.auth-help{font-size:12px}.auth-entry-footer{justify-content:center;text-align:center;gap:4px 16px;padding-top:22px;font-size:11px}
 }
 @media(max-width:360px){.auth-story{padding:22px 22px 48px}.auth-story h1{font-size:28px}.auth-entry{padding-left:12px;padding-right:12px}.auth-form-wrap{padding:24px 18px}.auth-form-wrap h2{font-size:31px}}
+
+/* The sign-in and authenticator pages use light cards without the app theme sheet. */
+@media screen{
+ .auth-page :is(.auth-description,.auth-help,.auth-entry-top,.auth-entry-footer,.auth-divider,.auth-demo-details,.auth-signup){color:#4b6052}
+ .auth-page :is(.auth-form label,.auth-office,.auth-public-card label){color:#304c3a}
+ .auth-page :is(.auth-input input,.auth-public-card input,.auth-public-card select){color:#243c2e}
+ .auth-page :is(.auth-input input,.auth-public-card input)::placeholder{color:#526657;opacity:1}
+}
