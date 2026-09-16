@@ -1,5 +1,7 @@
 'use strict';
-document.querySelectorAll('[data-address-picker]').forEach(picker => {
+(() => {
+function initialize(picker) {
+ if(picker.dataset.addressReady)return;picker.dataset.addressReady='true';
  const input = picker.querySelector('[role="combobox"]');
  const value = input;
  const list = picker.querySelector('[role="listbox"]');
@@ -22,7 +24,7 @@ document.querySelectorAll('[data-address-picker]').forEach(picker => {
  function render() {
   list.replaceChildren(); active=-1; input.removeAttribute('aria-activedescendant');
   results.forEach((place,i) => {
-   const option=document.createElement('div'); option.id=`place-option-${i}`; option.setAttribute('role','option'); option.setAttribute('aria-selected','false'); option.textContent=place.label;
+   const option=document.createElement('div'); option.id=`${list.id}-option-${i}`; option.setAttribute('role','option'); option.setAttribute('aria-selected','false'); option.textContent=place.label;
    option.addEventListener('mousedown',event=>event.preventDefault());
    option.addEventListener('click',()=>choose(place)); list.append(option);
   });
@@ -94,4 +96,7 @@ document.querySelectorAll('[data-address-picker]').forEach(picker => {
  document.addEventListener('click',event=>{if(!input.contains(event.target)&&!toggle.contains(event.target)&&!list.contains(event.target)) open(false);});
  picker.addEventListener('focusout',event=>{if(!picker.contains(event.relatedTarget)) open(false);});
  render();
-});
+}
+document.querySelectorAll('[data-address-picker]').forEach(initialize);
+document.addEventListener('destinations:add',event=>event.detail.querySelectorAll('[data-address-picker]').forEach(initialize));
+})();

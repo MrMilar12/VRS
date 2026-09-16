@@ -12,6 +12,7 @@ function personnel_schema(PDO $db): void {
    if(!in_array('preferred_personnel',array_column($columns,$mysql?'Field':'name'),true))throw $e;
   }
  }
+ destination_schema($db);
  personnel_registry_schema($db);
  $db->exec(($mysql?'INSERT IGNORE':'INSERT OR IGNORE').' INTO personnel_booking_assignments(booking_id,personnel_id) SELECT id,personnel_id FROM personnel_bookings WHERE personnel_id IS NOT NULL');
 }
@@ -97,7 +98,7 @@ function personnel_save(): int {
  if($end<=$start)throw new RuntimeException('End time must be after start time.');
  if(!one("SELECT id FROM offices WHERE id=? AND status='Active'",[$user['office_id']]))throw new RuntimeException('Your office is inactive. Contact your administrator.');
  $status=field('submit_mode',20)==='draft'?'Draft':'Pending Administrative Approval';
- $values=[field('preferred_personnel',160,false),field('requested_role',160),field('destination',255),field('purpose',5000),$start,$end,$status];
+ $values=[field('preferred_personnel',160,false),field('requested_role',160),destination_value(),field('purpose',5000),$start,$end,$status];
  if($id)run('UPDATE personnel_bookings SET preferred_personnel=?,requested_role=?,destination=?,purpose=?,start_datetime=?,end_datetime=?,status=? WHERE id=?',[...$values,$id]);
  else{
   run('INSERT INTO personnel_bookings(preferred_personnel,requested_role,destination,purpose,start_datetime,end_datetime,status,requester_id,office_id,created_at,reference) VALUES(?,?,?,?,?,?,?,?,?,?,?)',[...$values,$user['id'],$user['office_id'],date('Y-m-d H:i:s'),'TMP-'.bin2hex(random_bytes(16))]);

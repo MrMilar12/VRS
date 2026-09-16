@@ -241,6 +241,30 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
             check('reset' in assistant_post({'mode':'reset'}),'Assistant supports clearing conversation')
             day=(datetime.now()-timedelta(days=5)).strftime('%Y-%m-%d')
             data={'action':'save_request','vehicle_type':'SUV','passengers':'Ana Flores, Test Guest','start_datetime':day+'T08:00','end_datetime':day+'T12:00','destination':'HTTP Integration Test','purpose':'Complete workflow test','fuel_quantity':'5','office_id':'3','submit_mode':'submit'}
+            places=['First office, Baler','Second office, San Luis','Final stop '+('x'*230)]
+            requester.get('index.php?page=create')
+            multi={**data,'destinations[]':places,'purpose':'Multiple places regression','submit_mode':'draft'}
+            text,_=requester.post('actions.php',multi)
+            check(all(place in text for place in places),'Vehicle requisition displays all places')
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                multi_id,saved=db.execute("SELECT id,destination FROM requisitions WHERE purpose='Multiple places regression'").fetchone()
+                check(saved=='\n'.join(places) and len(saved)>255,'Multiple places persist in order beyond the old length limit')
+            code,edit,_=requester.get(f'index.php?page=create&id={multi_id}')
+            check(all('value="'+place+'"' in edit for place in places) and 'data-destination-add' in edit,'Editing restores separate destination fields')
+            text,_=requester.post('actions.php',{**multi,'id':multi_id,'destinations[]':['First office, Baler',''],'return_to':f'index.php?page=create&id={multi_id}'})
+            check('Enter a valid place' in text and 'value="First office, Baler"' in text,'Blank additional place rejected while preserving form input')
+            requester.get(f'index.php?page=create&id={multi_id}')
+            requester.post('actions.php',{**multi,'id':multi_id,'destinations[]':places[:2]})
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                check(db.execute('SELECT destination FROM requisitions WHERE id=?',(multi_id,)).fetchone()[0]=='\n'.join(places[:2]),'Removing a place updates saved destinations')
+            requester.get('index.php?page=personnel-create')
+            text,_=requester.post('actions.php',{**booking,'destinations[]':places,'purpose':'Personnel multiple places','submit_mode':'draft'})
+            check(all(place in text for place in places),'Personnel requisition supports multiple places')
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                personnel_multi_id=db.execute("SELECT id FROM personnel_bookings WHERE purpose='Personnel multiple places'").fetchone()[0]
+            code,edit,_=requester.get(f'index.php?page=personnel-create&id={personnel_multi_id}')
+            check(all('value="'+place+'"' in edit for place in places),'Personnel editing restores multiple places')
+            requester.get('index.php?page=create')
             for attempt in range(2):
                 text,url=requester.post('actions.php',{**data,'id':'','return_to':'index.php?page=create','end_datetime':day+'T07:00'})
                 check('Estimated return must be after departure.' in text and 'New requisition' in text and 'HTTP Integration Test' in text,'Failed new request keeps input for correction')

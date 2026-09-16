@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__.'/destinations.php';
 function e($v): string {return htmlspecialchars((string)($v??''),ENT_QUOTES,'UTF-8');}
 function all(string $sql,array $args=[]): array {global $pdo;$q=$pdo->prepare($sql);$q->execute($args);return $q->fetchAll();}
 function one(string $sql,array $args=[]): ?array {return all($sql,$args)[0]??null;}

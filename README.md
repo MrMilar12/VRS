@@ -196,3 +196,5 @@ Existing installations create the additive personnel tables on application start
 Run the isolated personnel workflow checks with `php tests/personnel.php` and migration/classification checks with `php tests/personnel-registry.php`, plus group-assignment checks with `php tests/personnel-multiple.php`; HTTP coverage is included in `python3 tests/smoke.py /path/to/php`.
 
 Header tracking searches both vehicle and personnel requisitions by reference, requester, assigned personnel (including additional assignees), driver, or destination. Personnel results show the assignment schedule, all assigned names, actual start/completion, and Submitted → Approved → In Progress → Completed progress. Results and filters respect requester and office visibility.
+
+Vehicle and personnel requisitions support up to 20 places in visit order using **Add place** and **Remove**. Each place accepts up to 255 characters (5,000 combined). Existing destinations remain editable. MySQL startup upgrades the destination columns to TEXT so multiple addresses are preserved; printing and tracking show the complete list.
