@@ -16,7 +16,7 @@ try{
  if($action==='personnel_save'){
   $id=personnel_save();$target='index.php?page=personnel-request&id='.$id;flash('Personnel requisition saved.');
  }elseif(str_starts_with($action,'personnel_')){
-  $id=number('id',1);personnel_transition($id,substr($action,10));$target='index.php?page=personnel-request&id='.$id;flash('Personnel requisition updated.');
+  $id=number('id',1);$target='index.php?page=personnel-request&id='.$id;personnel_transition($id,substr($action,10));unset($_SESSION['old_input']);flash('Personnel requisition updated.');
  }elseif($action==='save_request'){
   $id=(int)($_POST['id']??0);$old=$id?get_request($id):null;
   if($old){lock_record('requisitions',$id);$old=get_request($id);if((int)$old['requester_id']!==(int)$user['id']||!in_array($old['status'],['Draft','Returned for Correction']))throw new RuntimeException('Only your drafts and returned requests can be edited.');}

@@ -16,3 +16,5 @@
 @media(max-width:1100px){.tracking-results{grid-template-columns:1fr}.tracking-search{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.tracking-hero{padding:24px;align-items:flex-start}.tracking-hero-mark{width:44px;height:44px;border-radius:13px}.tracking-hero-mark svg{width:23px}.tracking-hero p{font-size:12px}.tracking-toolbar{align-items:flex-start}.tracking-toolbar .btn{font-size:11px}.tracking-search{grid-template-columns:1fr;padding:18px}.tracking-search-actions .btn{flex:1}.tracking-card{padding:20px 16px}.tracking-card h2{font-size:20px}.tracking-details{gap:16px}.tracking-progress li{font-size:9px}.tracking-card-footer{align-items:flex-start}.tracking-card-footer p{max-width:60%}}
 @media(max-width:360px){.tracking-card-top,.tracking-card-footer{align-items:flex-start;flex-direction:column}.tracking-card-footer p{max-width:100%}.tracking-details{grid-template-columns:1fr}.tracking-hero-mark{display:none}}
+
+.tracking-progress.personnel-progress{grid-template-columns:repeat(4,minmax(0,1fr))}.tracking-kind{margin-top:16px;font-weight:600}.tracking-kind+h2{margin-top:6px}

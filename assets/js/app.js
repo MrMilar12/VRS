@@ -2,7 +2,15 @@
 document.querySelector('[data-toggle-sidebar]')?.addEventListener('click',()=>document.querySelector('.sidebar').classList.toggle('open'));
 document.querySelectorAll('form[data-confirm]').forEach(form=>form.addEventListener('submit',event=>{if(!confirm(form.dataset.confirm))event.preventDefault();}));
 document.querySelectorAll('[data-close-dialog]').forEach(button=>button.addEventListener('click',()=>button.closest('dialog').close()));
-document.querySelectorAll('input[name="start_datetime"]').forEach(input=>input.addEventListener('change',()=>{const end=input.form.querySelector('input[name="end_datetime"]');if(end)end.min=input.value;}));
+document.querySelectorAll('input[name="start_datetime"]').forEach(input=>{
+ const end=input.form.querySelector('input[name="end_datetime"]');if(!end)return;
+ const validate=()=>{
+  end.min=input.value;
+  end.setCustomValidity(input.value&&end.value&&end.value<=input.value?'End date and time must be after the start date and time.':'');
+ };
+ input.addEventListener('input',validate);input.addEventListener('change',validate);
+ end.addEventListener('input',validate);end.addEventListener('change',validate);validate();
+});
 
 // Keep trip details on screen if validation, the database, or hosting rejects a save.
 document.addEventListener('submit',async event=>{

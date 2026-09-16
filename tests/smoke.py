@@ -4,6 +4,7 @@ Run: python3 tests/smoke.py /path/to/php
 import html, http.cookiejar, urllib.request, urllib.parse, urllib.error, re, sys, tempfile, shutil, subprocess, time, socket, json, sqlite3
 from pathlib import Path
 from datetime import datetime,timedelta
+from zoneinfo import ZoneInfo
 from auth_support import finish_mfa
 PHP=sys.argv[1] if len(sys.argv)>1 else 'php'
 ROOT=Path(__file__).resolve().parents[1]
@@ -95,7 +96,8 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
             check('Invalid record type' in text,'Separate driver writes are disabled')
             requester.get('index.php?page=personnel-create')
             day=(datetime.now()+timedelta(days=20)).strftime('%Y-%m-%d')
-            booking={'action':'personnel_save','id':'0','requested_role':'Technician','destination':'HTTP personnel site','purpose':'Inspect equipment','start_datetime':day+'T09:00','end_datetime':day+'T12:00','submit_mode':'submit'}
+            end_day=(datetime.now()+timedelta(days=21)).strftime('%Y-%m-%d')
+            booking={'action':'personnel_save','id':'0','requested_role':'Technician','destination':'HTTP personnel site','purpose':'Inspect equipment','start_datetime':day+'T09:00','end_datetime':end_day+'T12:00','submit_mode':'submit'}
             text,_=requester.post('actions.php',booking)
             check('Personnel requisition saved.' in text and 'Pending Administrative Approval' in text,'Personnel request submits and redirects to protected detail')
             with sqlite3.connect(app/'storage/demo.sqlite') as db:
@@ -110,6 +112,9 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
             requester.post('actions.php',{**booking,'submit_mode':'draft','destination':'Draft personnel only'})
             code,inbox,_=admin.get('index.php?page=approvals')
             check(code==200 and personnel_reference in inbox and vehicle_reference in inbox,'Approval inbox contains pending personnel and vehicle requisitions')
+            personnel_row=re.search(r'<tr>(?:(?!</tr>).)*'+re.escape(personnel_reference)+r'.*?</tr>',inbox,re.S)[0]
+            end_label=datetime.strptime(end_day,'%Y-%m-%d').strftime('%b ')+str(int(end_day[-2:]))+', '+end_day[:4]+' · 12:00 PM'
+            check('<small>Start</small>' in personnel_row and '<small>End</small>' in personnel_row and end_label in personnel_row,'Approval shows separate complete start and end dates for overnight request')
             check('Draft personnel only' not in inbox,'Draft personnel requisitions stay out of approval inbox')
             check(re.search(r'Approvals</span><b class="nav-count">'+str(expected_pending)+r'</b>',inbox),'Approval badge counts both requisition types')
             review=re.search(r'href="([^"]*page=personnel-request[^"]*)">'+re.escape(personnel_reference)+r'</a>',inbox)
@@ -132,11 +137,30 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
             text,_=admin.post('actions.php',{'action':'personnel_approve','id':booking_id,'personnel_ids[]':[personnel_id,additional_personnel_id],'password':'Demo@12345'})
             check('Personnel requisition updated.' in text and 'Print requisition' in text and 'Test Personnel, HTTP Driver' in text,'Administrator approves and displays multiple personnel')
             print_url=re.search(r'href="(print/personnel.php[^"]+)"',text)[1]
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                schedule=db.execute('SELECT start_datetime,end_datetime FROM personnel_bookings WHERE id=?',(booking_id,)).fetchone()
+                check(schedule==(day+' 09:00:00',end_day+' 12:00:00'),'Approval preserves the requested start and end timestamps')
             code,inbox,_=admin.get('index.php?page=approvals')
             check(personnel_reference not in inbox and vehicle_reference in inbox,'Approved personnel requisition leaves inbox while pending vehicle remains')
             code,slip,_=requester.get(f'print/personnel.php?id={booking_id}')
             check(code==200 and 'Test Personnel' in slip and 'HTTP Driver' in slip and 'PERSONNEL REQUISITION' in slip,'Requester prints approved personnel requisition')
             check(admin.get(print_url)[0]==200,'Encrypted personnel print link works')
+            check('data-slip-qr="'+personnel_reference+'"' in slip and 'vendor/qrcodegen.js' in slip and 'data-print-slip disabled' in slip,'Personnel print prepares reference QR before enabling print')
+            code,tracked,tracked_url=requester.get('index.php?page=requisitions&q='+personnel_reference)
+            check('page=requisitions' in tracked_url and personnel_reference in tracked and 'tracking-card' in tracked and 'personnel-progress' in tracked,'Header QR search tracks personnel requisition progress')
+            check('Test Personnel, HTTP Driver' in tracked and 'Approved and awaiting the start of the assignment.' in tracked,'Personnel tracking shows all assigned staff and correct status')
+            tracking_link=re.search(r'class="tracking-reference" href="([^"]+)"',tracked)[1]
+            check('page=personnel-request' in tracking_link and requester.get(html.unescape(tracking_link))[0]==200,'Personnel tracking opens protected personnel detail')
+            code,tracked,_=requester.get('index.php?page=requisitions&q=HTTP+Driver')
+            check(personnel_reference in tracked,'Header search finds secondary assigned personnel')
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                db.execute("INSERT INTO personnel_bookings(reference,requester_id,office_id,personnel_id,requested_role,destination,purpose,start_datetime,end_datetime,status,created_at) SELECT 'PRIVATE-PERSONNEL-TRACK',1,2,personnel_id,requested_role,destination,purpose,start_datetime,end_datetime,'Approved',created_at FROM personnel_bookings WHERE id=?",(booking_id,))
+            code,tracked,_=requester.get('index.php?page=requisitions&q=Test+Personnel')
+            check(personnel_reference in tracked and 'PRIVATE-PERSONNEL-TRACK' not in tracked,'Personnel name search hides another requester records')
+            code,tracked,_=admin.get('index.php?page=requisitions&q=Test+Personnel&office=2')
+            check('PRIVATE-PERSONNEL-TRACK' in tracked and personnel_reference not in tracked,'Tracking office filter includes authorized personnel records')
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                db.execute("UPDATE personnel_bookings SET status='Cancelled' WHERE reference='PRIVATE-PERSONNEL-TRACK'")
             requester.get('index.php?page=personnel-create');requester.post('actions.php',booking)
             with sqlite3.connect(app/'storage/demo.sqlite') as db:
                 second_id=db.execute('SELECT max(id) FROM personnel_bookings').fetchone()[0]
@@ -153,6 +177,35 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
             requester.get(path);requester.post('actions.php',{'action':'personnel_cancel','id':booking_id})
             code,text,_=admin.get(f'api.php?action=personnel_availability&id={second_id}&personnel_id={personnel_id}')
             check(json.loads(text)['available'],'Cancelling personnel requisition releases availability through API')
+            progress_path=f'index.php?page=personnel-request&id={second_id}'
+            admin.get(progress_path)
+            admin.post('actions.php',{'action':'personnel_approve','id':second_id,'personnel_id':personnel_id,'password':'Demo@12345'})
+            code,text,_=admin.get(progress_path)
+            check('This assignment has not started yet.' in text and re.search(r'<button[^>]*disabled[^>]*>Start assignment</button>',text),'Future assignment explains timing and disables Start')
+            text,_=admin.post('actions.php',{'action':'personnel_start','id':second_id,'remarks':'Keep this progress note','return_to':progress_path})
+            check('Start this assignment within its approved schedule.' in text and '>Keep this progress note</textarea>' in text,'Failed start retains progress remarks')
+            text,_=admin.post('actions.php',{'action':'personnel_complete','id':second_id,'remarks':'Not yet started','return_to':progress_path})
+            check('Only assignments in progress can be completed.' in text,'Approved request cannot skip the start step')
+            local_now=datetime.now(ZoneInfo('Asia/Manila'))
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                db.execute('UPDATE personnel_bookings SET start_datetime=?,end_datetime=? WHERE id=?',((local_now-timedelta(minutes=5)).strftime('%Y-%m-%d %H:%M:%S'),(local_now+timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S'),second_id))
+            admin.get(progress_path)
+            text,_=admin.post('actions.php',{'action':'personnel_start','id':second_id,'remarks':'Work started','return_to':progress_path})
+            check('Complete assignment' in text and 'Work started' in text,'Start succeeds and records remarks in history')
+            code,progress_tracking,_=admin.get('index.php?page=requisitions&q=Test+Personnel&status=In+Progress')
+            check('Personnel assignment is in progress.' in progress_tracking and 'Actual start' in progress_tracking,'Tracking status filter shows personnel assignment in progress')
+            progress_form=re.search(r'<form[^>]*data-confirm="Mark this assignment complete.*?</form>',text,re.S)[0]
+            progress_data=dict(re.findall(r'<input type="hidden" name="([^"]+)" value="([^"]*)"',progress_form))
+            progress_data['remarks']='All assigned work completed'
+            text,_=admin.post('actions.php',progress_data)
+            check('This assignment is complete.' in text and 'All assigned work completed' in text,'Rendered Complete form saves completion and remarks')
+            code,tracked,_=requester.get('index.php?page=requisitions&q=Test+Personnel&status=Completed')
+            check('This personnel assignment is complete.' in tracked and 'Actual completion' in tracked,'Completed personnel tracking shows actual completion time')
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                status,started,ended=db.execute('SELECT status,actual_start,actual_end FROM personnel_bookings WHERE id=?',(second_id,)).fetchone()
+                check(status=='Completed' and started and ended,'Complete action persists status and actual timestamps')
+                check(db.execute("SELECT count(*) FROM personnel_booking_history WHERE booking_id=? AND decision='Completed'",(second_id,)).fetchone()[0]==1,'Completion recorded once in history')
+
             admin.get('index.php?page=notifications')
             code,text,_=requester.get('index.php?page=notifications')
             check('index.php?page=personnel-bookings' in text,'Personnel notifications link to booking list')
