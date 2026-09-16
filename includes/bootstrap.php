@@ -18,6 +18,7 @@ header('Referrer-Policy: no-referrer');
 header('Cache-Control: no-store');
 require_once __DIR__.'/database.php';
 require_once __DIR__.'/functions.php';
+require_once __DIR__.'/personnel.php';
 require_once __DIR__.'/records.php';
 require_once __DIR__.'/auth.php';
 require_once __DIR__.'/url-security.php';
@@ -25,6 +26,7 @@ try {
     $pdo = new PDO($config['demo'] ? 'sqlite:'.__DIR__.'/../storage/demo.sqlite' : $config['dsn'], $config['username'], $config['password'], [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
     auth_schema($pdo);
     if ($config['demo']) { $pdo->exec('PRAGMA foreign_keys=ON'); $pdo->exec('PRAGMA busy_timeout=5000'); initialize_database($pdo); }
+    personnel_schema($pdo);
 } catch (Throwable $e) {
     http_response_code(503); exit('Database unavailable. <a href="setup.php">Open workspace setup</a> or follow README.md to configure MySQL.');
 }

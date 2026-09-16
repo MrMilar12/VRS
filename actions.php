@@ -13,7 +13,11 @@ try{
  if($action==='logout'){$_SESSION=[];session_destroy();redirect('login.php');}
  if(str_starts_with($action,'factor_')){require __DIR__.'/includes/profile-auth-actions.php';}
  lock_transaction();$transaction=true;
- if($action==='save_request'){
+ if($action==='personnel_save'){
+  $id=personnel_save();$target='index.php?page=personnel-request&id='.$id;flash('Personnel requisition saved.');
+ }elseif(str_starts_with($action,'personnel_')){
+  $id=number('id',1);personnel_transition($id,substr($action,10));$target='index.php?page=personnel-request&id='.$id;flash('Personnel requisition updated.');
+ }elseif($action==='save_request'){
   $id=(int)($_POST['id']??0);$old=$id?get_request($id):null;
   if($old){lock_record('requisitions',$id);$old=get_request($id);if((int)$old['requester_id']!==(int)$user['id']||!in_array($old['status'],['Draft','Returned for Correction']))throw new RuntimeException('Only your drafts and returned requests can be edited.');}
   $start=datetime_value('start_datetime');$end=datetime_value('end_datetime');if($end<=$start)throw new RuntimeException('Estimated return must be after departure.');
@@ -42,7 +46,7 @@ try{
     if(!$v||!$d)throw new RuntimeException('Select a valid vehicle and driver.');
     $blockingIssues=[...vehicle_assignment_issues($v,$r),...driver_assignment_issues($d,$r)];
     if($blockingIssues)throw new RuntimeException(implode(' ',$blockingIssues));
-    $issues=conflicts($vehicle,$driver,$r['start_datetime'],$r['end_datetime'],$id);
+    $issues=conflicts($vehicle,$driver,$r['start_datetime'],$r['end_datetime'],$id,false);
     $override=$overrideRequested?field('override_reason',1000):'';
     if($overrideRequested&&mb_strlen($override)<15)throw new RuntimeException('Enter an override reason of at least 15 characters.');
     if($issues){
@@ -54,7 +58,8 @@ try{
    run('INSERT INTO approvals(requisition_id,user_id,stage,decision,remarks,created_at) VALUES(?,?,?,?,?,?)',[$id,$user['id'],'Administrative',$action==='approve'?'Approved':$new,$remark,date('Y-m-d H:i:s')]);
   }elseif($action==='dispatch'){
    require_role('Dispatcher','Administrator');if($r['status']!=='Approved')throw new RuntimeException('Only approved requests can be dispatched.');
-   $v=lock_record('vehicles',(int)$r['vehicle_id']);lock_record('drivers',(int)$r['driver_id']);
+   $v=lock_record('vehicles',(int)$r['vehicle_id']);$d=lock_record('drivers',(int)$r['driver_id']);
+   $driverIssues=driver_assignment_issues($d,$r);if($driverIssues)throw new RuntimeException(implode(' ',$driverIssues));
    if(!in_array($v['status'],['Available','Reserved'])||one("SELECT id FROM requisitions WHERE status='Dispatched' AND (vehicle_id=? OR driver_id=?)",[$r['vehicle_id'],$r['driver_id']]))throw new RuntimeException('Vehicle or driver is currently unavailable.');
    $out=number('odometer_out');$departure=datetime_value('actual_time');if($departure>date('Y-m-d H:i:s'))throw new RuntimeException('Actual departure cannot be in the future.');if($out<(int)$v['odometer'])throw new RuntimeException('Odometer out cannot be below the current reading.');
    if(one('SELECT id FROM vehicle_blocks WHERE vehicle_id=? AND start_datetime<=? AND end_datetime>?',[$v['id'],$departure,$departure]))throw new RuntimeException('Vehicle is blocked for maintenance.');
@@ -76,9 +81,10 @@ try{
  }elseif($action==='save_record'){
   $entity=field('entity',30);if(in_array($entity,['users','offices']))require_role('Administrator');else require_role('Administrator','Administrative Officer');
   $schemas=record_schemas();if(!isset($schemas[$entity]))throw new RuntimeException('Invalid record type.');$values=[];
-  foreach($schemas[$entity]['fields'] as $key=>$f){if($key==='password')continue;$value=field($key,255,!($f['optional']??false));if(($f['type']??'')==='number'&&(!ctype_digit($value)||(int)$value<($f['min']??0)))throw new RuntimeException('Invalid '.$f['label']);if(isset($f['options'])&&!array_key_exists($value,$f['options']))throw new RuntimeException('Invalid '.$f['label']);if(($f['type']??'')==='date'&&(!DateTime::createFromFormat('!Y-m-d',$value)||DateTime::createFromFormat('!Y-m-d',$value)->format('Y-m-d')!==$value))throw new RuntimeException('Invalid '.$f['label']);$values[$key]=$value;}
+  foreach($schemas[$entity]['fields'] as $key=>$f){if($key==='password')continue;$value=field($key,255,!($f['optional']??false));if(($f['type']??'')==='number'&&(!ctype_digit($value)||(int)$value<($f['min']??0)))throw new RuntimeException('Invalid '.$f['label']);if(isset($f['options'])&&!array_key_exists($value,$f['options']))throw new RuntimeException('Invalid '.$f['label']);if(($f['type']??'')==='date'&&$value!==''&&(!DateTime::createFromFormat('!Y-m-d',$value)||DateTime::createFromFormat('!Y-m-d',$value)->format('Y-m-d')!==$value))throw new RuntimeException('Invalid '.$f['label']);$values[$key]=$value;}
   $id=(int)($_POST['id']??0);if($id&&!one("SELECT id FROM $entity WHERE id=?",[$id]))throw new RuntimeException('Record not found.');
   if($entity==='users'){if($id&&$values['status']!=='Pending'&&(one('SELECT status FROM users WHERE id=?',[$id])['status']??'')==='Pending')throw new RuntimeException('Approve or reject pending registrations from the account requests panel.');if(!filter_var($values['email'],FILTER_VALIDATE_EMAIL))throw new RuntimeException('Enter a valid email.');$pass=field('password',200,false);if(!$id||$pass!==''){auth_password_policy($pass);$values['password_hash']=password_hash($pass,PASSWORD_DEFAULT);}if($id===$user['id']&&($values['role']!=='Administrator'||$values['status']!=='Active'))throw new RuntimeException('You cannot deactivate or demote your own administrator account.');}
+  if($entity==='personnel')$values=personnel_registry_values($values,$id);
   if(in_array($entity,['vehicles','drivers'])&&$id){lock_record($entity,$id);$col=$entity==='vehicles'?'vehicle_id':'driver_id';if($values['status']!=='Available'&&one("SELECT id FROM requisitions WHERE $col=? AND status IN ('Approved','Dispatched') AND end_datetime>?",[$id,date('Y-m-d H:i:s')]))throw new RuntimeException('Resolve upcoming assignments before making this resource unavailable.');}
   if($entity==='vehicles'&&isset($_FILES['photo'])&&$_FILES['photo']['error']!==UPLOAD_ERR_NO_FILE){
    $upload=$_FILES['photo'];if($upload['error']!==UPLOAD_ERR_OK||$upload['size']>4*1024*1024||!is_uploaded_file($upload['tmp_name']))throw new RuntimeException('Upload a JPEG or PNG photograph up to 4 MB.');

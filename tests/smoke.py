@@ -1,7 +1,7 @@
 """HTTP integration tests against an isolated copy and disposable SQLite database.
 Run: python3 tests/smoke.py /path/to/php
 """
-import http.cookiejar, urllib.request, urllib.parse, urllib.error, re, sys, tempfile, shutil, subprocess, time, socket, json, sqlite3
+import html, http.cookiejar, urllib.request, urllib.parse, urllib.error, re, sys, tempfile, shutil, subprocess, time, socket, json, sqlite3
 from pathlib import Path
 from datetime import datetime,timedelta
 from auth_support import finish_mfa
@@ -22,7 +22,7 @@ class Client:
         return code,text,url
     def post(self,path,data):
         data={'csrf':self.token,**data}
-        with self.http.open(self.base+'/'+path,urllib.parse.urlencode(data).encode(),timeout=10) as r:
+        with self.http.open(self.base+'/'+path,urllib.parse.urlencode(data,doseq=True).encode(),timeout=10) as r:
             text,url=r.read().decode(),r.url
             if '<b>Warning</b>' in text or '<b>Fatal error</b>' in text:raise AssertionError(text)
             token=re.search(r'name="csrf" value="([^"]+)"',text)
@@ -69,13 +69,93 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
             finally:
                 (app/'config/local.php').unlink()
             admin.login('daniel@vrs.local')
-            for page in ['dashboard','developer','assistant','calendar','requisitions','create','approvals','dispatch','vehicles','drivers','offices','users','maintenance','reports','audit','settings','notifications']:
+            for page in ['dashboard','developer','assistant','calendar','requisitions','create','approvals','dispatch','vehicles','drivers','personnel','personnel-bookings','personnel-create','offices','users','maintenance','reports','audit','settings','notifications']:
                 code,text,_=admin.get('index.php?page='+page);check(code==200 and '</html>' in text,'Render '+page)
             for page in ['vehicles','drivers','offices','users']:
                 code,text,_=admin.get(f'index.php?page={page}&edit=1');check(code==200 and 'Save ' in text,'Edit form '+page)
             for path in ['storage/demo.sqlite','config/system.php','.git/config','includes/database.php','database/vehicle_requisition.sql']:
                 check(admin.get(path)[0]==404,'Private path blocked: '+path)
             requester=Client(base);requester.login('requester@vrs.local')
+            check(requester.get('index.php?page=personnel')[0]==403,'Requester cannot manage personnel')
+            admin.get('index.php?page=personnel&add=1')
+            text,_=admin.post('actions.php',{'action':'save_record','entity':'personnel','id':'0','full_name':'Test Personnel','employee_number':'HTTP-P001','classification':'Utility','office_id':'1','position':'Technician','contact':'','status':'Available'})
+            check('Record saved.' in text and 'Test Personnel' in text,'Create personnel from management form')
+            code,text,url=admin.get('index.php?page=drivers')
+            check('page=personnel' in url and 'Classification' in text and 'Juan Dela Cruz' in text,'Legacy driver page opens unified personnel list')
+            driver_form={'action':'save_record','entity':'personnel','id':'0','full_name':'HTTP Driver','employee_number':'HTTP-D001','classification':'Driver','office_id':'1','position':'Driver','contact':'','status':'Available','return_to':'index.php?page=personnel&add=1'}
+            text,_=admin.post('actions.php',driver_form)
+            check('Drivers require a license' in text,'Driver classification requires license details')
+            admin.get('index.php?page=personnel&add=1')
+            text,_=admin.post('actions.php',{**driver_form,'license_number':'LICENSE-001','license_expiry':'2030-12-31'})
+            check('Record saved.' in text and 'HTTP Driver' in text,'Create driver from unified personnel form')
+            code,text,_=admin.get('index.php?page=personnel&classification=Utility')
+            check('Test Personnel' in text and 'HTTP Driver' not in text,'Classification filter separates utility staff')
+            admin.get('index.php?page=personnel')
+            text,_=admin.post('actions.php',{'action':'save_record','entity':'drivers','id':'0','return_to':'index.php?page=personnel'})
+            check('Invalid record type' in text,'Separate driver writes are disabled')
+            requester.get('index.php?page=personnel-create')
+            day=(datetime.now()+timedelta(days=20)).strftime('%Y-%m-%d')
+            booking={'action':'personnel_save','id':'0','requested_role':'Technician','destination':'HTTP personnel site','purpose':'Inspect equipment','start_datetime':day+'T09:00','end_datetime':day+'T12:00','submit_mode':'submit'}
+            text,_=requester.post('actions.php',booking)
+            check('Personnel requisition saved.' in text and 'Pending Administrative Approval' in text,'Personnel request submits and redirects to protected detail')
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                booking_id=db.execute('SELECT max(id) FROM personnel_bookings').fetchone()[0]
+                personnel_id=db.execute('SELECT id FROM personnel WHERE employee_number=?',('HTTP-P001',)).fetchone()[0]
+                additional_personnel_id=db.execute('SELECT id FROM personnel WHERE employee_number=?',('HTTP-D001',)).fetchone()[0]
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                personnel_reference=db.execute('SELECT reference FROM personnel_bookings WHERE id=?',(booking_id,)).fetchone()[0]
+                vehicle_reference=db.execute("SELECT reference FROM requisitions WHERE status='Pending Administrative Approval' LIMIT 1").fetchone()[0]
+                expected_pending=db.execute("SELECT count(*) FROM requisitions WHERE status IN ('Pending Supervisor','Pending Administrative Approval')").fetchone()[0]+1
+            requester.get('index.php?page=personnel-create')
+            requester.post('actions.php',{**booking,'submit_mode':'draft','destination':'Draft personnel only'})
+            code,inbox,_=admin.get('index.php?page=approvals')
+            check(code==200 and personnel_reference in inbox and vehicle_reference in inbox,'Approval inbox contains pending personnel and vehicle requisitions')
+            check('Draft personnel only' not in inbox,'Draft personnel requisitions stay out of approval inbox')
+            check(re.search(r'Approvals</span><b class="nav-count">'+str(expected_pending)+r'</b>',inbox),'Approval badge counts both requisition types')
+            review=re.search(r'href="([^"]*page=personnel-request[^"]*)">'+re.escape(personnel_reference)+r'</a>',inbox)
+            check(review is not None,'Personnel approval row links to personnel review')
+            code,detail,_=admin.get(html.unescape(review[1]))
+            check(code==200 and 'Assign &amp; approve personnel' in detail,'Personnel inbox link opens assignment and approval form')
+            check('name="personnel_ids[]" data-personnel-assignment' in detail and 'data-personnel-add' in detail and 'Hold Ctrl' not in detail,'Approval uses simple dropdown with Add personnel')
+            code,filtered,_=admin.get('index.php?page=approvals&q='+urllib.parse.quote(personnel_reference))
+            check(personnel_reference in filtered and vehicle_reference not in filtered,'Approval search finds personnel requisitions')
+            code,filtered,_=admin.get('index.php?page=approvals&office=2')
+            check(personnel_reference not in filtered,'Approval office filter applies to personnel requisitions')
+            code,dashboard,_=admin.get('index.php?page=dashboard')
+            check(re.search(r'Pending approvals</span>.*?class="stat-number">'+str(expected_pending)+r'<',dashboard,re.S),'Dashboard pending total includes personnel requisitions')
+            path=f'index.php?page=personnel-request&id={booking_id}'
+            admin.get(path)
+            code,text,_=admin.get(f'api.php?action=personnel_availability&id={booking_id}&personnel_id={personnel_id}')
+            check(code==200 and json.loads(text)['available'],'Personnel availability API returns available staff')
+            code,text,_=admin.get(f'api.php?action=personnel_availability&id={booking_id}&personnel_ids[]={personnel_id}&personnel_ids[]={additional_personnel_id}')
+            check(code==200 and json.loads(text)['available'],'Availability checks multiple personnel together')
+            text,_=admin.post('actions.php',{'action':'personnel_approve','id':booking_id,'personnel_ids[]':[personnel_id,additional_personnel_id],'password':'Demo@12345'})
+            check('Personnel requisition updated.' in text and 'Print requisition' in text and 'Test Personnel, HTTP Driver' in text,'Administrator approves and displays multiple personnel')
+            print_url=re.search(r'href="(print/personnel.php[^"]+)"',text)[1]
+            code,inbox,_=admin.get('index.php?page=approvals')
+            check(personnel_reference not in inbox and vehicle_reference in inbox,'Approved personnel requisition leaves inbox while pending vehicle remains')
+            code,slip,_=requester.get(f'print/personnel.php?id={booking_id}')
+            check(code==200 and 'Test Personnel' in slip and 'HTTP Driver' in slip and 'PERSONNEL REQUISITION' in slip,'Requester prints approved personnel requisition')
+            check(admin.get(print_url)[0]==200,'Encrypted personnel print link works')
+            requester.get('index.php?page=personnel-create');requester.post('actions.php',booking)
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                second_id=db.execute('SELECT max(id) FROM personnel_bookings').fetchone()[0]
+            code,text,_=admin.get(f'index.php?page=personnel-request&id={second_id}')
+            check(re.search(r'<option value="'+str(personnel_id)+r'" disabled',text),'Conflicting personnel is disabled in assignment dropdown')
+            code,text,_=admin.get(f'api.php?action=personnel_availability&id={second_id}&personnel_id={personnel_id}')
+            check(not json.loads(text)['available'],'Personnel availability API detects booking conflict')
+            code,text,_=admin.get(f'api.php?action=personnel_availability&id={second_id}&personnel_ids[]={additional_personnel_id}')
+            check(not json.loads(text)['available'],'Secondary assignee is unavailable for another requisition')
+            text,_=admin.post('actions.php',{'action':'personnel_approve','id':second_id,'personnel_id':personnel_id,'password':'Demo@12345','return_to':f'index.php?page=personnel-request&id={second_id}'})
+            check('Already assigned' in text,'Forged conflicting personnel approval is rejected')
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                check(db.execute('SELECT status FROM personnel_bookings WHERE id=?',(second_id,)).fetchone()[0]=='Pending Administrative Approval','Failed personnel approval leaves booking pending')
+            requester.get(path);requester.post('actions.php',{'action':'personnel_cancel','id':booking_id})
+            code,text,_=admin.get(f'api.php?action=personnel_availability&id={second_id}&personnel_id={personnel_id}')
+            check(json.loads(text)['available'],'Cancelling personnel requisition releases availability through API')
+            admin.get('index.php?page=notifications')
+            code,text,_=requester.get('index.php?page=notifications')
+            check('index.php?page=personnel-bookings' in text,'Personnel notifications link to booking list')
             check(requester.get('index.php?page=users')[0]==403,'Requester cannot manage users')
             check(requester.get('index.php?page=developer')[0]==403,'Developer page requires Administrator')
             try:

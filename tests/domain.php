@@ -2,7 +2,7 @@
 // Isolated in-memory checks; does not touch the application's database.
 date_default_timezone_set('Asia/Manila');
 require __DIR__.'/../includes/database.php';require __DIR__.'/../includes/functions.php';
-$pdo=new PDO('sqlite::memory:',null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);$pdo->exec('PRAGMA foreign_keys=ON');initialize_database($pdo);$user=one('SELECT * FROM users WHERE id=1');
+$pdo=new PDO('sqlite::memory:',null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);$pdo->exec('PRAGMA foreign_keys=ON');initialize_database($pdo);require __DIR__.'/../includes/personnel.php';personnel_schema($pdo);$user=one('SELECT * FROM users WHERE id=1');
 function verify(bool $condition,string $label):void{if(!$condition)throw new RuntimeException('FAIL: '.$label);echo 'PASS: '.$label."\n";}
 verify(count(all('SELECT * FROM vehicles'))===6,'Demo fleet seeded');
 run("DELETE FROM requisitions WHERE status NOT IN ('Completed','Dispatched','Approved')");
@@ -24,4 +24,13 @@ verify((bool)vehicle_assignment_issues(array_replace($vehicle,['registration_exp
 verify((bool)vehicle_assignment_issues(array_replace($vehicle,['capacity'=>0]),$trip),'Insufficient capacity is a non-overridable restriction');
 verify((bool)driver_assignment_issues(array_replace($driver,['license_expiry'=>'2000-01-01']),$trip),'Expired driver license is a non-overridable restriction');
 verify((bool)driver_assignment_issues(array_replace($driver,['status'=>'Inactive']),$trip),'Unavailable driver is a non-overridable restriction');
+$maintenanceVehicle=one('SELECT * FROM vehicles WHERE id=2');
+$maintenanceTrip=array_replace($trip,['start_datetime'=>$day.' 09:00:00','end_datetime'=>$day.' 10:00:00']);
+verify((bool)vehicle_assignment_issues($maintenanceVehicle,$maintenanceTrip),'Scheduled maintenance is a non-overridable restriction');
+verify(!conflicts(2,0,$maintenanceTrip['start_datetime'],$maintenanceTrip['end_datetime'],0,false),'Maintenance is not classified as an overridable booking');
+$maintenanceTrip['start_datetime']=$day.' 12:15:00';$maintenanceTrip['end_datetime']=$day.' 14:00:00';
+verify((bool)vehicle_assignment_issues($maintenanceVehicle,$maintenanceTrip),'Maintenance turnaround remains blocked');
+$maintenanceTrip['start_datetime']=$day.' 12:30:00';
+verify(!vehicle_assignment_issues($maintenanceVehicle,$maintenanceTrip),'Vehicle becomes available at maintenance buffer boundary');
+verify(!vehicle_assignment_issues(array_replace($vehicle,['capacity'=>1]),array_replace($trip,['passengers'=>"One passenger,   ,\n  "])), 'Blank passenger entries do not make a vehicle unavailable');
 echo "All domain checks passed.\n";

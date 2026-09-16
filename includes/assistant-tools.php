@@ -25,7 +25,7 @@ function assistant_availability(string $kind,array $lookup): array {
  $live=$lookup['start_datetime']==='';$start=$live?$now:str_replace('T',' ',$lookup['start_datetime']).':00';$end=$live?date('Y-m-d H:i:s',time()+60):str_replace('T',' ',$lookup['end_datetime']).':00';
  if($end<=$start)return ['reply'=>'Please provide a return time after departure for the availability check.','items'=>[],'needs_dates'=>true];
  $items=[];$available=0;$unavailable=0;
- foreach(all('SELECT * FROM '.$kind.' ORDER BY '.($kind==='vehicles'?'model':'full_name')) as $row){
+ foreach(all($kind==='vehicles'?'SELECT * FROM vehicles ORDER BY model':"SELECT d.* FROM drivers d JOIN personnel p ON p.driver_id=d.id WHERE p.classification='Driver' ORDER BY d.full_name") as $row){
   $name=$kind==='vehicles'?$row['model'].' · '.$row['plate']:$row['full_name'];
   $haystack=$name.($kind==='vehicles'?' '.$row['type']:'');if($lookup['search']!==''&&mb_stripos($haystack,$lookup['search'])===false)continue;
   $reasons=[];$id=(int)$row['id'];
@@ -33,8 +33,7 @@ function assistant_availability(string $kind,array $lookup): array {
    if(!in_array($row['status'],['Available','Reserved']))$reasons[]=$row['status'];
    if($row['registration_expiry']<substr($end,0,10))$reasons[]='Registration expires before this period ends';
   }else{
-   if($row['status']!=='Available')$reasons[]=$row['status'];
-   if($row['license_expiry']<substr($end,0,10))$reasons[]='License expires before this period ends';
+   $reasons=driver_assignment_issues($row,['start_datetime'=>$start,'end_datetime'=>$end]);
   }
   if(conflicts($kind==='vehicles'?$id:0,$kind==='drivers'?$id:0,$start,$end))$reasons[]=$kind==='vehicles'?'Scheduled trip or maintenance conflicts with this period (including turnaround)':'Scheduled trip conflicts with this period (including turnaround)';
   $ok=!$reasons;$ok?$available++:$unavailable++;

@@ -6,7 +6,7 @@ $fleet=all('SELECT * FROM vehicles ORDER BY id');$active=all("SELECT * FROM requ
 $blocked=array_column(all('SELECT vehicle_id FROM vehicle_blocks WHERE start_datetime<=? AND end_datetime>?',[$now,$now]),'vehicle_id');
 $reservedIds=array_column(all("SELECT vehicle_id FROM requisitions WHERE status='Approved' AND start_datetime<=? AND end_datetime>?",[$now,$now]),'vehicle_id');
 $available=count(array_filter($fleet,fn($v)=>$v['status']==='Available'&&!in_array($v['id'],$activeIds)&&!in_array($v['id'],$blocked)&&!in_array($v['id'],$reservedIds)));
-$pending=array_values(array_filter($rows,fn($r)=>in_array($r['status'],['Pending Supervisor','Pending Administrative Approval'])));
+$pending=is_role('Administrator')?approval_requests():array_values(array_filter($rows,fn($r)=>in_array($r['status'],['Pending Supervisor','Pending Administrative Approval'])));
 $maintenance=count(array_filter($fleet,fn($v)=>$v['status']==='Under Maintenance'||in_array($v['id'],$blocked)));
 $completed=count(array_filter($rows,fn($r)=>in_array($r['status'],['Returned','Completed'])));
 $overdue=count(array_filter($active,fn($r)=>$r['end_datetime']<$now));

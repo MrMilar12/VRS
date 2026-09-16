@@ -240,3 +240,5 @@ a.profile{color:inherit;text-decoration:none;border-radius:8px}a.profile:focus-v
 .header-tracking-search:focus-within{outline:3px solid #a9c5b2;outline-offset:2px}
 @media screen{html[data-theme=dark] .header-tracking-search{border-color:#617957}html[data-theme=dark] .header-tracking-search button{background:#b1d18d;color:#192c17}html[data-theme=dark] .header-tracking-search button:hover{background:#c5e3a5}}
 @media(max-width:720px){.header-tracking-search input{font-size:16px}}
+
+.personnel-selection-row{display:flex;align-items:flex-end;gap:8px}.personnel-selection-row label{flex:1;min-width:0}.personnel-selection-row select{width:100%}

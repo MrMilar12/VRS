@@ -44,7 +44,7 @@ function installation_empty(PDO $db): void {
     if($db->query('SHOW TABLES')->fetchColumn()!==false) throw new RuntimeException('This database contains tables. Choose a new or empty database; existing data will not be overwritten.');
 }
 function installation_schema(PDO $db): void {
-    $sql=preg_replace('/^--.*$/m','',file_get_contents(__DIR__.'/../database/vehicle_requisition.sql'));
+    $sql=preg_replace('/^--.*$/m','',file_get_contents(__DIR__.'/../database/vehicle_requisition.sql')."\n".file_get_contents(__DIR__.'/../database/personnel.mysql.sql'));
     foreach(explode(';',$sql) as $statement) if(trim($statement)!=='') $db->exec($statement);
 }
 function installation_seed(PDO $db,array $account): void {

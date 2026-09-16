@@ -1,14 +1,14 @@
 <?php
 $unavailable=[];
 foreach(['vehicle'=>'vehicles','driver'=>'drivers'] as $kind=>$table):
-$records=all('SELECT * FROM '.$table.' ORDER BY '.($kind==='vehicle'?'model':'full_name'));
+$records=all($kind==='vehicle'?'SELECT * FROM vehicles ORDER BY model':"SELECT d.* FROM drivers d JOIN personnel p ON p.driver_id=d.id WHERE p.classification='Driver' ORDER BY d.full_name");
 ?><label>Assign <?=$kind?><select name="<?=$kind?>_id" data-assignment-resource><option value="">Select <?=$kind?></option>
 <?php foreach($records as $record):
 $hard=$kind==='vehicle'?vehicle_assignment_issues($record,$r):driver_assignment_issues($record,$r);
-$bookings=conflicts($kind==='vehicle'?(int)$record['id']:0,$kind==='driver'?(int)$record['id']:0,$r['start_datetime'],$r['end_datetime'],(int)$r['id']);
+$bookings=conflicts($kind==='vehicle'?(int)$record['id']:0,$kind==='driver'?(int)$record['id']:0,$r['start_datetime'],$r['end_datetime'],(int)$r['id'],false);
 $issues=[...$hard,...$bookings];$name=$kind==='vehicle'?$record['model'].' · '.$record['plate'].' · '.$record['capacity'].' seats':$record['full_name'];
 if($issues)$unavailable[]=['name'=>$name,'reason'=>implode(' ',$issues)];
-?><option value="<?=$record['id']?>" <?=$issues?'disabled':''?> data-overridable="<?=!$hard&&$bookings?'true':'false'?>" title="<?=e(implode(' ',$issues))?>"><?=e($name.($hard?' — Unavailable':($bookings?' — Already scheduled':' — Available')))?></option><?php endforeach?>
+?><option value="<?=$record['id']?>" <?=$issues?'disabled':''?> data-overridable="<?=!$hard&&$bookings?'true':'false'?>" title="<?=e(implode(' ',$issues))?>"><?=e($name.($hard?' — '.implode(' ',$hard):($bookings?' — Already scheduled':' — Available')))?></option><?php endforeach?>
 </select></label><?php endforeach?>
 <p class="field-hint">Availability is checked for this trip’s dates and times, including the <?=e(setting('turnaround_minutes','30'))?> minute turnaround buffer. Booked resources cannot be assigned through normal approval.</p>
 <?php if($unavailable):?><details class="assignment-conflicts"><summary>Why are some vehicles or drivers unavailable?</summary><ul><?php foreach($unavailable as $item):?><li><strong><?=e($item['name'])?></strong><p><?=e($item['reason'])?></p></li><?php endforeach?></ul></details><?php endif?>

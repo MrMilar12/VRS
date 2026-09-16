@@ -15,7 +15,7 @@ function flash(string $message,string $type='success'): void {$_SESSION['flash']
 function field(string $name,int $max=255,bool $required=true): string {$raw=$_POST[$name]??'';if(!is_string($raw))throw new RuntimeException('Please provide a valid '.str_replace('_',' ',$name).'.');$v=trim($raw);if(($required&&$v==='')||mb_strlen($v)>$max)throw new RuntimeException('Please provide a valid '.str_replace('_',' ',$name).'.');return $v;}
 function number(string $name,int $min=0): int {$v=filter_var($_POST[$name]??null,FILTER_VALIDATE_INT);if($v===false||$v<$min)throw new RuntimeException('Invalid '.str_replace('_',' ',$name).'.');return $v;}
 function datetime_value(string $name): string {$s=field($name,30);$d=DateTime::createFromFormat('Y-m-d\TH:i',$s);if(!$d||$d->format('Y-m-d\TH:i')!==$s)throw new RuntimeException('Enter a valid date and time.');return $d->format('Y-m-d H:i:s');}
-function badge(string $status): string {$class=match($status){'Approved','Reserved'=>'blue','Dispatched','In Use'=>'purple','Completed','Returned','Available','Active'=>'green','Rejected','Under Maintenance'=>'red','Pending Supervisor','Pending Administrative Approval','Submitted'=>'amber',default=>'gray'};return '<span class="badge '.$class.'"><i></i>'.e($status).'</span>';}
+function badge(string $status): string {$class=match($status){'Approved','Reserved'=>'blue','Dispatched','In Use','In Progress'=>'purple','Completed','Returned','Available','Active'=>'green','Rejected','Under Maintenance'=>'red','Pending Supervisor','Pending Administrative Approval','Submitted'=>'amber',default=>'gray'};return '<span class="badge '.$class.'"><i></i>'.e($status).'</span>';}
 function shortdate(string $s,string $format='M j, Y'): string {return date($format,strtotime($s));}
 function request_query(): string {return 'SELECT r.*,u.full_name requester_name,u.position,o.name office_name,o.code office_code,v.model,v.plate,d.full_name driver_name FROM requisitions r JOIN users u ON u.id=r.requester_id JOIN offices o ON o.id=r.office_id LEFT JOIN vehicles v ON v.id=r.vehicle_id LEFT JOIN drivers d ON d.id=r.driver_id';}
 function visible(array $r): bool {global $user;return is_role('Administrator','Administrative Officer','Dispatcher')||($user['role']==='Supervisor'&&(int)$r['office_id']===(int)$user['office_id'])||(int)$r['requester_id']===(int)$user['id'];}
@@ -41,26 +41,33 @@ function calendar_resources(array $rows): array {
 function get_request(int $id): array {$r=one(request_query().' WHERE r.id=?',[$id]);if(!$r||!visible($r))throw new RuntimeException('Request not found or access denied.');return $r;}
 function lock_transaction(): void {global $pdo;if($pdo->getAttribute(PDO::ATTR_DRIVER_NAME)==='sqlite')$pdo->exec('BEGIN IMMEDIATE');else $pdo->beginTransaction();}
 function finish_transaction(bool $success): void {global $pdo;if($pdo->getAttribute(PDO::ATTR_DRIVER_NAME)==='sqlite')$pdo->exec($success?'COMMIT':'ROLLBACK');elseif($pdo->inTransaction()){$success?$pdo->commit():$pdo->rollBack();}}
-function lock_record(string $table,int $id): ?array {global $pdo;if(!in_array($table,['requisitions','vehicles','drivers']))throw new RuntimeException('Invalid resource.');return one("SELECT * FROM $table WHERE id=?".($pdo->getAttribute(PDO::ATTR_DRIVER_NAME)==='mysql'?' FOR UPDATE':''),[$id]);}
-function conflicts(int $vehicle,int $driver,string $start,string $end,int $exclude=0): array {
+function lock_record(string $table,int $id): ?array {global $pdo;if(!in_array($table,['requisitions','vehicles','drivers','personnel','personnel_bookings']))throw new RuntimeException('Invalid resource.');if($table==='drivers'&&function_exists('personnel_registry_schema'))one('SELECT id FROM personnel WHERE driver_id=?'.($pdo->getAttribute(PDO::ATTR_DRIVER_NAME)==='mysql'?' FOR UPDATE':''),[$id]);return one("SELECT * FROM $table WHERE id=?".($pdo->getAttribute(PDO::ATTR_DRIVER_NAME)==='mysql'?' FOR UPDATE':''),[$id]);}
+function conflicts(int $vehicle,int $driver,string $start,string $end,int $exclude=0,bool $includeMaintenance=true): array {
     global $pdo;
     // Locking reads observe the latest committed assignments after resource locks are acquired.
     $currentRead=$pdo->getAttribute(PDO::ATTR_DRIVER_NAME)==='mysql'&&$pdo->inTransaction()?' FOR UPDATE':'';
     $buffer=(int)setting('turnaround_minutes','30');$from=date('Y-m-d H:i:s',strtotime($start)-$buffer*60);$to=date('Y-m-d H:i:s',strtotime($end)+$buffer*60);
     $found=all("SELECT reference,vehicle_id,driver_id,start_datetime,end_datetime FROM requisitions WHERE id<>? AND status IN ('Approved','Dispatched') AND (vehicle_id=? OR driver_id=?) AND ((start_datetime < ? AND end_datetime > ?) OR (status='Dispatched' AND end_datetime < ?))".$currentRead,[$exclude,$vehicle,$driver,$to,$from,date('Y-m-d H:i:s')]);
     $messages=[];foreach($found as $r)$messages[]=$r['reference'].' has an overlapping '.((int)$r['vehicle_id']===$vehicle?'vehicle':'driver').' assignment ('.shortdate($r['start_datetime'],'M j, Y g:i A').' – '.shortdate($r['end_datetime'],'M j, Y g:i A').').';
-    if(one('SELECT id FROM vehicle_blocks WHERE vehicle_id=? AND start_datetime < ? AND end_datetime > ?'.$currentRead,[$vehicle,$to,$from]))$messages[]='The vehicle has a maintenance block during this schedule.';
+    if($includeMaintenance)$messages=[...$messages,...vehicle_maintenance_issues($vehicle,$start,$end)];
     return $messages;
 }
+function vehicle_maintenance_issues(int $vehicle,string $start,string $end): array {
+ global $pdo;
+ $currentRead=$pdo->getAttribute(PDO::ATTR_DRIVER_NAME)==='mysql'&&$pdo->inTransaction()?' FOR UPDATE':'';
+ $buffer=(int)setting('turnaround_minutes','30');
+ $from=date('Y-m-d H:i:s',strtotime($start)-$buffer*60);$to=date('Y-m-d H:i:s',strtotime($end)+$buffer*60);
+ return one('SELECT id FROM vehicle_blocks WHERE vehicle_id=? AND start_datetime < ? AND end_datetime > ?'.$currentRead,[$vehicle,$to,$from])?['The vehicle has a maintenance block during this schedule.']:[];
+}
 function vehicle_assignment_issues(array $v,array $r): array {
- $issues=[];
+ $issues=vehicle_maintenance_issues((int)$v['id'],$r['start_datetime'],$r['end_datetime']);
  if(!in_array($v['status'],['Available','Reserved']))$issues[]='Vehicle is '.$v['status'].'.';
  if($v['registration_expiry']<substr($r['end_datetime'],0,10))$issues[]='Vehicle registration expires before this trip ends.';
- if(count(array_filter(preg_split('/[,\n]+/',$r['passengers'])))>(int)$v['capacity'])$issues[]='The passenger list exceeds this vehicle’s capacity.';
+ if(count(array_filter(array_map('trim',preg_split('/[,\n]+/',$r['passengers'])),fn($name)=>$name!==''))>(int)$v['capacity'])$issues[]='The passenger list exceeds this vehicle’s capacity.';
  return $issues;
 }
 function driver_assignment_issues(array $d,array $r): array {
- $issues=[];
+ $issues=function_exists('personnel_driver_issues')?personnel_driver_issues($d,$r):[];
  if($d['status']!=='Available')$issues[]='Driver is unavailable.';
  if($d['license_expiry']<substr($r['end_datetime'],0,10))$issues[]='Driver license expires before this trip ends.';
  return $issues;

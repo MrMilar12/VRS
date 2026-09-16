@@ -1,7 +1,7 @@
 <?php
 require __DIR__.'/../includes/functions.php';require __DIR__.'/../includes/database.php';require __DIR__.'/../includes/booking-assistant.php';require __DIR__.'/../includes/assistant-tools.php';
 date_default_timezone_set('Asia/Manila');
-$pdo=new PDO('sqlite::memory:',null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);initialize_database($pdo);
+$pdo=new PDO('sqlite::memory:',null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);initialize_database($pdo);require __DIR__.'/../includes/personnel.php';personnel_schema($pdo);
 function check_tool(bool $ok,string $label): void {if(!$ok)throw new RuntimeException($label);echo 'PASS: '.$label."\n";}
 run("DELETE FROM requisitions");run('DELETE FROM vehicle_blocks');
 $lookup=['search'=>'SAB 1234','status'=>'all','start_datetime'=>date('Y-m-d',strtotime('+2 days')).'T08:00','end_datetime'=>date('Y-m-d',strtotime('+2 days')).'T17:00'];
