@@ -84,7 +84,7 @@ function personnel_issues(array $person,array $booking,bool $includeTrips=true):
  $from=date('Y-m-d H:i:s',strtotime($booking['start_datetime'])-$buffer*60);
  $to=date('Y-m-d H:i:s',strtotime($booking['end_datetime'])+$buffer*60);
  $locking=$pdo->getAttribute(PDO::ATTR_DRIVER_NAME)==='mysql'&&$pdo->inTransaction()?' FOR UPDATE':'';
- if(one("SELECT b.id FROM personnel_bookings b WHERE ".personnel_assignment_match()." AND b.id<>? AND status IN ('Approved','In Progress') AND ((start_datetime < ? AND end_datetime > ?) OR (status='In Progress' AND end_datetime<=?))".$locking,[$person['id'],$person['id'],$booking['id']??0,$to,$from,date('Y-m-d H:i:s')]))$issues[]='Already assigned during this schedule or an earlier assignment is still in progress.';
+ if(one("SELECT b.id FROM personnel_bookings b WHERE ".personnel_assignment_match()." AND b.id<>? AND status IN ('Approved','In Progress') AND ((CASE WHEN status='In Progress' THEN COALESCE(actual_start,start_datetime) ELSE start_datetime END < ? AND end_datetime > ?) OR (status='In Progress' AND end_datetime<=?))".$locking,[$person['id'],$person['id'],$booking['id']??0,$to,$from,date('Y-m-d H:i:s')]))$issues[]='Already assigned during this schedule or an earlier assignment is still in progress.';
  return $issues;
 }
 function personnel_notify(int $userId,string $message): void {
@@ -132,9 +132,10 @@ function personnel_transition(int $id,string $action): void {
   $ids=personnel_assigned_ids($r);if(!$ids)throw new RuntimeException('Assign personnel before starting.');
   $people=[];foreach($ids as $personId){$person=personnel_lock($personId);if(!$person)throw new RuntimeException('Assigned personnel not found.');$people[]=$person;}
   $now=date('Y-m-d H:i:s');
-  if($now<$r['start_datetime']||$now>=$r['end_datetime'])throw new RuntimeException('Start this assignment within its approved schedule.');
+  if($now>=$r['end_datetime'])throw new RuntimeException('The scheduled end has passed. This assignment can no longer be started.');
+  $actualWindow=array_replace($r,['start_datetime'=>min($now,$r['start_datetime'])]);
   foreach($people as $person){
-   $issues=personnel_issues($person,$r);
+   $issues=personnel_issues($person,$actualWindow);
    if(one("SELECT b.id FROM personnel_bookings b WHERE ".personnel_assignment_match()." AND status='In Progress' AND b.id<>?",[$person['id'],$person['id'],$id]))$issues[]='Personnel is currently on another assignment.';
    if($issues)throw new RuntimeException($person['full_name'].': '.implode(' ',$issues));
   }

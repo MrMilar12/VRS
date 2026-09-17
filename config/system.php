@@ -1,6 +1,6 @@
 <?php
 return [
-    'name' => 'Vehicle Requisition & Scheduling',
+    'name' => 'Vehicle & Personnel Requisition System',
     'timezone' => 'Asia/Manila',
     'demo' => true,
     'update_repository' => 'MrMilar12/VRS',

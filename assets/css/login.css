@@ -103,3 +103,5 @@
  .auth-page :is(.auth-input input,.auth-public-card input,.auth-public-card select){color:#243c2e}
  .auth-page :is(.auth-input input,.auth-public-card input)::placeholder{color:#526657;opacity:1}
 }
+
+.auth-brand-caption{letter-spacing:1.2px;font-size:9px}.auth-brand .requisition-brand-mark>span{width:25px;height:25px}.auth-public-brand{flex-wrap:wrap;row-gap:8px}.auth-public-brand>span{letter-spacing:1px}.auth-entry-footer{gap:14px;flex-wrap:wrap}

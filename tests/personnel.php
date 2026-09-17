@@ -38,9 +38,13 @@ $user=$owner;$_POST=array_replace($input,['submit_mode'=>'submit']);lock_transac
 deny_personnel(fn()=>transition($second,'approve',['personnel_id'=>$staffId,'password'=>'Demo@12345']),'Approval rechecks conflicting bookings on server');
 $user=$owner;transition($id,'cancel');check_personnel(!personnel_issues($staff,personnel_booking($second)),'Cancellation releases personnel availability');
 $user=$admin;transition($second,'approve',['personnel_id'=>$staffId,'password'=>'Demo@12345']);
-deny_personnel(fn()=>transition($second,'start'),'Assignment cannot start before approved schedule');
-run('UPDATE personnel_bookings SET start_datetime=?,end_datetime=? WHERE id=?',[date('Y-m-d H:i:s',time()-60),date('Y-m-d H:i:s',time()+3600),$second]);
-transition($second,'start');check_personnel(personnel_booking($second)['status']==='In Progress','Approved assignment can start within schedule');
+run("UPDATE personnel_bookings SET status='Approved',start_datetime=?,end_datetime=? WHERE id=?",[date('Y-m-d H:i:s',time()-60),date('Y-m-d H:i:s',time()+3600),$id]);
+deny_personnel(fn()=>transition($second,'start'),'Early start checks conflicts before the scheduled start');
+run("UPDATE personnel_bookings SET status='Cancelled' WHERE id=?",[$id]);
+transition($second,'start');$started=personnel_booking($second);
+check_personnel($started['status']==='In Progress'&&$started['actual_start']<$started['start_datetime'],'Approved assignment starts early and records actual start');
+$earlyWindow=array_replace($other,['start_datetime'=>date('Y-m-d H:i:s'),'end_datetime'=>date('Y-m-d H:i:s',time()+600)]);
+check_personnel((bool)personnel_issues($staff,$earlyWindow),'Early actual start blocks overlapping personnel assignments');
 run('UPDATE personnel_bookings SET end_datetime=? WHERE id=?',[date('Y-m-d H:i:s',time()-1),$second]);check_personnel((bool)personnel_issues($staff,$other),'Overdue in-progress assignment remains unavailable');
 transition($second,'complete');check_personnel(!personnel_issues($staff,$other),'Completion releases personnel');
 check_personnel((bool)personnel_booking($second)['actual_end'],'Completion timestamp recorded');

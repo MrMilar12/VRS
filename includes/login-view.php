@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#203e32"><title>Sign in · VRS</title><link rel="stylesheet" href="assets/css/style.css?v=<?=filemtime(__DIR__.'/../assets/css/style.css')?>"><link rel="stylesheet" href="assets/css/login.css?v=<?=filemtime(__DIR__.'/../assets/css/login.css')?>"><script src="assets/js/login.js" defer></script></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#203e32"><title>Sign in · VPRS</title><link rel="stylesheet" href="assets/css/style.css?v=<?=filemtime(__DIR__.'/../assets/css/style.css')?>"><link rel="stylesheet" href="assets/css/login.css?v=<?=filemtime(__DIR__.'/../assets/css/login.css')?>"><script src="assets/js/login.js" defer></script></head>
 <body class="auth-page"><main class="auth-layout">
 <section class="auth-story" aria-labelledby="story-title">
-<a class="auth-brand" href="index.php" aria-label="VRS home"><span class="auth-brand-mark"><?=icon('car',25)?></span><span>vrs<span class="auth-brand-caption">FLEET OPERATIONS</span></span></a>
+<a class="auth-brand" href="index.php" aria-label="VPRS home"><span class="auth-brand-mark requisition-brand-mark" aria-hidden="true"><?=icon('car',25)?><span><?=icon('users',14)?></span></span><span>VPRS<span class="auth-brand-caption">VEHICLE &amp; PERSONNEL</span></span></a>
 <div class="auth-story-copy"><span class="auth-kicker"><i></i> A BETTER WAY TO MOVE</span><h1 id="story-title">Good journeys<br>start <em>here.</em></h1><p>A little less paperwork.<br>A lot more moving forward.</p></div>
 <div class="auth-route" aria-hidden="true">
 <svg viewBox="0 0 620 300" fill="none"><path class="map-contour" d="M-70 250C60 20 290 400 670 40M-70 225C60-5 290 375 670 15M-70 200C60-30 290 350 670-10M-70 275C60 45 290 425 670 65M-70 300C60 70 290 450 670 90"/><path class="map-road" d="M-35 233H145C205 233 205 98 270 98H365C435 98 435 226 510 226H665"/><path class="map-road-center" d="M-35 233H145C205 233 205 98 270 98H365C435 98 435 226 510 226H665"/><circle cx="110" cy="233" r="8" fill="#dae9a4"/><circle cx="510" cy="226" r="8" fill="#dae9a4"/><circle cx="510" cy="226" r="17" stroke="#dae9a4" stroke-opacity=".35"/></svg>
@@ -12,7 +12,7 @@
 <div class="auth-story-footer"><span>Request. Approve. Go.</span></div>
 </section>
 <section class="auth-entry" aria-labelledby="login-title">
-<div class="auth-entry-top"><span><?=icon('shield',14)?> Your workspace, connected.</span><span class="auth-edition">VRS / 01</span></div>
+<div class="auth-entry-top"><span><?=icon('shield',14)?> Your workspace, connected.</span><span class="auth-edition">VPRS / 01</span></div>
 <div class="auth-form-wrap">
 <div class="auth-office"><?=icon('office',16)?><span><?=e($organization)?></span></div>
 <h2 id="login-title">Welcome back.</h2><p class="auth-description">Sign in to keep your day moving.</p>
@@ -25,5 +25,5 @@
 <p class="auth-help">Manage authenticator verification in your profile.</p><p class="auth-signup">New here? <a href="register.php">Create an account</a></p>
 
 </div>
-<footer class="auth-entry-footer"><span>Vehicle Requisition & Scheduling</span><span>Built for better journeys.</span></footer>
+<footer class="auth-entry-footer"><span>Vehicle &amp; Personnel Requisition System</span><span>People and journeys, coordinated.</span></footer>
 </section></main></body></html>
