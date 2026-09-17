@@ -7,7 +7,7 @@ function work_reminders(array $vehicles,array $personnel,string $now,int $viewer
   if(!in_array($status,['Draft','Returned for Correction','Pending Supervisor','Pending Administrative Approval','Approved','Dispatched','In Progress','Returned'],true))continue;
   if(in_array($status,['Draft','Returned for Correction'],true)&&(int)$r['requester_id']!==$viewerId)continue;
   $ongoing=in_array($status,['Dispatched','In Progress','Returned'],true);
-  if(substr($r['start_datetime'],0,10)>$today&&!$ongoing)continue;
+  $upcoming=substr($r['start_datetime'],0,10)>$today&&!$ongoing;
   $carryover=substr($r['start_datetime'],0,10)<$today;
   $late=$r['end_datetime']<=$now;
   $task=match($status){
@@ -17,7 +17,7 @@ function work_reminders(array $vehicles,array $personnel,string $now,int $viewer
    'Dispatched'=>'Record vehicle return', 'In Progress'=>'Complete assignment',
    'Returned'=>'Complete trip',default=>'Review request'
   };
-  $items[]=array_replace($r,['request_kind'=>$kind,'reminder_task'=>$task,'carryover'=>$carryover,'overdue'=>$late,'reminder_priority'=>$late?0:($carryover?1:2)]);
+  $items[]=array_replace($r,['request_kind'=>$kind,'reminder_task'=>$task,'carryover'=>$carryover,'overdue'=>$late,'work_group'=>$carryover?'unfinished':($upcoming?'upcoming':'today'),'reminder_priority'=>$late?0:($carryover?1:($upcoming?3:2))]);
  }
  usort($items,fn($a,$b)=>($a['reminder_priority']<=>$b['reminder_priority'])?:strcmp($a['start_datetime'],$b['start_datetime'])?:strcmp($a['reference'],$b['reference']));
  return $items;
