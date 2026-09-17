@@ -202,3 +202,7 @@ Vehicle and personnel requisitions support up to 20 places in visit order using 
 ### Delete controls
 
 Vehicles, Personnel, Offices, Users, vehicle/personnel requisitions, and Notifications have Delete controls that open a confirmation page. Maintenance blocks also have a Delete action. Administrators and administrative officers can delete unused fleet/personnel records; only administrators can delete unused offices or accounts. Account deletion requires the administrator password and cannot remove the signed-in account. Users can delete only their own notifications. Request owners and administrators can delete drafts, returned, rejected, or cancelled requisitions that have no recorded trip/assignment progress. Active and completed requisitions, linked master records, audit history, and reports are protected. Successful deletions are recorded in the audit trail. Run isolated checks with `php tests/deletion.php`.
+
+### Account requests
+
+Administrators review public registrations under **Administration → Account requests**. Pending and rejected requests are excluded from **Users & roles**. Approval activates the account with the Requester role and moves it into the main account list. Rejection keeps the account blocked and available in the Rejected filter. Review requires an administrator password and CSRF validation; the general user editor cannot activate pending or rejected registrations. Existing inactive accounts remain in Users & roles.
