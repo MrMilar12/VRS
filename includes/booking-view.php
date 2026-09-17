@@ -21,10 +21,11 @@ page_heading('Booking assistant','Plan a trip, ask a question, or get help with 
   </div>
   <div class="booking-messages" role="log" aria-label="Booking conversation" aria-live="polite" data-booking-messages <?=empty($state['messages'])?'hidden':''?>>
    <?php foreach($state['messages']??[] as $message):?><div class="booking-message <?=$message['role']==='user'?'user':'assistant'?>"><strong><?=$message['role']==='user'?'You':'VPRS assistant'?></strong><p><?=e($message['content'])?></p></div><?php endforeach?>
+ <section class="assistant-availability" data-availability-panel hidden aria-labelledby="availability-heading"><span class="assistant-eyebrow">FLEET AT A GLANCE</span><h3 id="availability-heading">Your availability results</h3><p data-availability-summary></p><button type="button" class="btn small" data-availability-refresh>Refresh availability</button><p class="field-hint" data-availability-checked role="status"></p><div data-availability-items></div></section>
   </div>
   <div class="assistant-thinking" data-assistant-thinking hidden aria-hidden="true"><span class="assistant-thinking-dots"><i></i><i></i><i></i></span><span>Thinking through the details</span></div>
   <form class="booking-composer" data-booking-chat-form><?=csrf()?><label for="booking-message">Ask a question or tell me about your trip</label><textarea id="booking-message" name="message" rows="2" maxlength="3000" required placeholder="e.g. Can you help me plan a trip? Or: How do I request personnel?"></textarea><div><span><?=icon('clock',14)?> <?=e($config['timezone'])?></span><button type="submit" class="btn primary">Send message</button></div><p role="status" data-booking-status></p></form>
- <section class="assistant-availability" data-availability-panel hidden aria-labelledby="availability-heading"><span class="assistant-eyebrow">FLEET AT A GLANCE</span><h3 id="availability-heading">Your availability results</h3><p data-availability-summary></p><button type="button" class="btn small" data-availability-refresh>Refresh availability</button><p class="field-hint" data-availability-checked role="status"></p><div data-availability-items></div></section>
+
  </section>
  <aside class="assistant-guide" aria-labelledby="assistant-guide-title">
   <span class="assistant-eyebrow">FROM PLAN TO REQUEST</span><h2 id="assistant-guide-title">Questions welcome.<br>Plans made simpler.</h2><p>Ask about the system at any point. Your trip details stay in this conversation.</p>
