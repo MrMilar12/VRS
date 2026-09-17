@@ -1,0 +1,32 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Administrator confirmation checks</title>
+<article class="registration-review"><h3>Test Requester</h3><form id="review"><input name="action" value="review_registration" type="hidden"><label>Password<input name="confirmation_password" type="password" required></label><button name="decision" value="approve">Approve</button><button name="decision" value="reject">Reject</button></form></article>
+<form id="save"><input name="action" value="save_record" type="hidden"><input name="full_name" required><label>Password<input name="confirmation_password" type="password" required></label><button>Save</button></form>
+<form id="delete" data-confirm="Delete?"><input name="action" value="delete_record" type="hidden"><label>Password<input name="confirmation_password" type="password" required></label><button>Delete</button></form>
+<dialog id="admin-confirm-dialog"><form id="admin-confirm-form"><h2 id="admin-confirm-title"></h2><p id="admin-confirm-description"></p><p id="admin-confirm-account"></p><input id="admin-confirm-password" type="password" required><button type="button" data-admin-cancel>Cancel</button><button id="admin-confirm-submit">Confirm</button></form></dialog><pre id="results">RUNNING</pre>
+<script src="../assets/js/app.js"></script><script src="../assets/js/admin-confirm.js"></script><script>
+window.addEventListener('load',async()=>{
+ const lines=[],dialog=document.querySelector('dialog'),password=document.getElementById('admin-confirm-password'),review=document.getElementById('review');
+ const settle=()=>new Promise(resolve=>setTimeout(resolve,30));let submissions=[];
+ document.addEventListener('submit',event=>{if(event.target.id==='admin-confirm-form'||event.defaultPrevented)return;event.preventDefault();submissions.push({form:event.target.id,decision:event.submitter?.value,password:event.target.elements.confirmation_password.value});});
+ const check=(ok,label)=>{if(!ok)throw Error(label);lines.push('PASS: '+label);};
+ try{
+  await settle();check(review.querySelector('label').hidden,'Inline password field hidden with modal available');
+  review.querySelector('[value=approve]').click();check(dialog.open&&document.activeElement===password,'Approval opens modal and focuses password');
+  check(document.getElementById('admin-confirm-account').textContent==='Test Requester','Modal identifies selected account');
+  document.getElementById('admin-confirm-submit').click();check(submissions.length===0&&dialog.open,'Empty password cannot submit');
+  password.value='test-secret';dialog.querySelector('[data-admin-cancel]').click();await settle();check(!dialog.open&&!password.value&&submissions.length===0,'Cancel clears password without sending action');
+  for(const decision of ['approve','reject']){
+   review.querySelector('[value='+decision+']').click();check(document.getElementById('admin-confirm-title').textContent.toLowerCase().startsWith(decision),'Correct action title: '+decision);
+   password.value='test-secret';document.getElementById('admin-confirm-submit').click();await settle();
+   check(submissions.at(-1).decision===decision&&submissions.at(-1).password==='test-secret','Confirmation retains decision and password: '+decision);
+   check(!password.value&&!review.elements.confirmation_password.value,'Password cleared after submission');
+  }
+  const save=document.getElementById('save');save.querySelector('button').click();check(!dialog.open,'Invalid account form is validated before confirmation');
+  save.elements.full_name.value='New Account';save.querySelector('button').click();check(dialog.open&&document.getElementById('admin-confirm-account').textContent==='New Account','Save opens modal for entered account');dialog.close();await settle();
+  let nativePrompts=0;window.confirm=()=>{nativePrompts++;return true;};document.querySelector('#delete button').click();check(dialog.open&&nativePrompts===0&&document.getElementById('admin-confirm-submit').classList.contains('danger'),'Delete uses one destructive confirmation modal');
+  dialog.dispatchEvent(new Event('cancel'));dialog.close();await settle();check(!password.value,'Dismissal clears password');
+  lines.push('ALL CHECKS PASSED');
+ }catch(error){lines.push('FAIL: '+error.message);}
+ document.getElementById('results').textContent=lines.join('\n');
+});
+</script></html>
