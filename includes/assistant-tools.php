@@ -2,6 +2,11 @@
 // Read-only answers: no model-generated SQL and no trip/personnel contact data.
 function assistant_help(string $topic): string {
  return match($topic){
+ 'personnel'=>'For staff assistance, open Personnel requisitions → New personnel requisition. Enter the required role, places, schedule, and purpose, then submit it. The Administrator can assign multiple personnel. This chat prepares vehicle drafts; use the personnel form for staff requests.',
+ 'tracking'=>'Use the tracking search in the header. Enter a slip reference or personnel name to find requests you can access, then open one to see its status, schedule, and actual progress.',
+ 'notifications'=>'Open the bell icon in the header. All updates and Unread filters help you find new messages. View details opens the related request; Mark all as read clears unread indicators.',
+ 'registration'=>'New users request an account from the sign-in page. They cannot sign in until an Administrator approves them under Account requests. Approval grants Requester access.',
+ 'reminders'=>'Overview shows unfinished work, today’s work, and upcoming tasks for vehicle and personnel requests. Future tasks move into today’s group on their scheduled day. Unfinished work stays visible on following days until resolved. Open request takes you to its details.',
  'approval'=>'Only the Administrator can approve, reject, or return a vehicle request. Supervisors and Administrative Officers cannot approve. Submitted requests go directly to Pending Administrative Approval.',
  'booking'=>'Tell me the destination, departure and return date/time, vehicle type, passenger names, and purpose. Once complete, I will show the review form. Review it and select Submit request for approval. The Administrator assigns the vehicle and driver.',
  'editing'=>'You can edit your own Draft or Returned for Correction requisitions. Vehicle and driver records can be edited by Administrators and Administrative Officers. Users and offices can be edited only by the Administrator. On Vehicles, use Edit vehicle.',
@@ -10,7 +15,7 @@ function assistant_help(string $topic): string {
  'dispatch'=>'After Administrator approval, the Dispatcher or Administrator can release the vehicle, record its return and odometer readings, then complete the trip.',
  'profile'=>'Click your name/avatar or My profile in the sidebar to view your account, office, role, and authenticator settings. Contact your administrator to change your account details.',
  'availability'=>'Ask for available or unavailable vehicles or drivers, optionally by name, plate, vehicle type, and a departure/return time. Without times, I check right now. Results include assignment conflicts, maintenance, and registration/license validity. Availability can change; only Administrator approval reserves a vehicle.',
- default=>'I can help prepare vehicle requests, search available or unavailable vehicles and drivers, and explain approvals, editing, the calendar, dispatch, your profile, and authenticator settings. Try “Which vans are available now?” or “Who can approve my request?”.'};
+ default=>'Hi! I’m your VPRS assistant. You can tell me about a trip a little at a time, or ask how the system works. I can help prepare vehicle requests, search available or unavailable vehicles and drivers, and explain approvals, editing, the calendar, dispatch, personnel requisitions, tracking, notifications, your profile, and authenticator settings. Try “Which vans are available now?” or “Who can approve my request?”.'};
 }
 function assistant_lookup_validate(array $raw): array {
  $out=[];foreach(['search'=>100,'start_datetime'=>16,'end_datetime'=>16] as $key=>$max){$value=$raw[$key]??'';if($value===null)$value='';if(!is_string($value)||mb_strlen($value)>$max)throw new RuntimeException('Please use a shorter availability search.');$out[$key]=trim($value);}
@@ -48,7 +53,18 @@ function assistant_resolve(array $result,array $current): array {
  if($intent!=='booking'){
   $result=array_replace($result,booking_validate($current));
   if(in_array($intent,['vehicles','drivers'])){$result['availability']=assistant_availability($intent,$result['lookup']);$result['reply']=$result['availability']['reply'];}
-  else $result['reply']=assistant_help($result['topic']);
+  elseif($intent==='system'){$result['reply']=assistant_help($result['topic']);if($result['topic']==='booking'&&!$result['ready'])$result['reply'].="\n\n".booking_followup($result);}
+  elseif(trim($result['reply']??'')==='')$result['reply']=assistant_help('overview');
  }
  return $result;
+}
+
+// Common greetings and help remain usable without an external AI connection.
+function assistant_local_reply(string $message,array $current): ?array {
+ $text=mb_strtolower(trim($message));$topic=null;$reply=null;
+ if(preg_match('/^(hi|hello|hey|good morning|good afternoon|good evening|kumusta|kamusta|hello po|hi po)[!?. ]*$/u',$text))$reply='Hello! I can help plan a vehicle trip or answer questions about VPRS. What would you like help with?';
+ elseif(preg_match('/^(thanks|thank you|salamat|salamat po)[!?. ]*$/u',$text))$reply='You’re welcome! You can ask another question or continue planning your trip.';
+ elseif(in_array($text,['help','what can you do?','how do i use the booking assistant?','how does approval work?','how do i request personnel?','how do i track my request?','what appears on overview?'],true))$topic=match($text){'how does approval work?'=>'approval','how do i request personnel?'=>'personnel','how do i track my request?'=>'tracking','what appears on overview?'=>'reminders',default=>'overview'};
+ if($reply===null&&$topic===null)return null;
+ return ['intent'=>$topic?'system':'conversation','topic'=>$topic??'overview','lookup'=>[],'reply'=>$reply??assistant_help($topic),...booking_validate($current)];
 }

@@ -22,3 +22,11 @@ check_tool(assistant_availability('vehicles',['start_datetime'=>$lookup['start_d
 $current=booking_validate(['destination'=>'Baler'])['draft'];$reply=assistant_resolve(['intent'=>'system','topic'=>'approval','lookup'=>[],'draft'=>['destination'=>'Invented'],'reply'=>'Invented answer'],$current);
 check_tool($reply['draft']['destination']==='Baler'&&!$reply['ready']&&str_contains($reply['reply'],'Only the Administrator'),'System questions preserve booking progress and use verified permissions');
 check_tool(str_contains(assistant_help('authenticator'),'My profile'),'Authenticator help explains real profile controls');
+$greeting=assistant_resolve(assistant_local_reply('Hello!',$current),$current);
+check_tool($greeting['intent']==='conversation'&&$greeting['draft']===$current&&str_contains($greeting['reply'],'Hello!'),'Greeting works locally and preserves draft');
+$personnelHelp=assistant_resolve(assistant_local_reply('How do I request personnel?',$current),$current);
+check_tool(str_contains($personnelHelp['reply'],'Personnel requisitions')&&$personnelHelp['draft']===$current,'Personnel help gives correct form and preserves vehicle draft');
+$thanks=assistant_resolve(assistant_local_reply('Salamat po!',$current),$current);
+check_tool(str_contains($thanks['reply'],'welcome')&&$thanks['draft']===$current,'Thanks does not restart booking');
+check_tool(assistant_local_reply('Change my destination to Manila',$current)===null,'Booking corrections continue to AI extraction');
+check_tool(str_contains(assistant_help('reminders'),'Unfinished work stays visible'),'Help describes persistent overview reminders');

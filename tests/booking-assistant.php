@@ -37,3 +37,7 @@ check_booking(booking_configuration_error()===null,'Configured cloud has no setu
 $direct=booking_ollama_payload([['role'=>'user','content'=>'Book a van']],[]);
 check_booking($direct['model']==='gpt-oss:120b'&&!isset($direct['format']),'Direct cloud normalizes local cloud model suffix');
 check_booking(!str_contains(json_encode($direct),'fixture-cloud-key'),'API key excluded from model prompt');
+$natural='Baler sounds good. What date and time would you like to leave?';
+$conversational=booking_parse_ollama_response(['done'=>true,'message'=>['content'=>json_encode(['intent'=>'booking','topic'=>'booking','lookup'=>[],'reply'=>$natural,'draft'=>['destination'=>'Baler']])]]);
+check_booking(str_contains($conversational['reply'],$natural)&&!$conversational['ready'],'Natural follow-up is retained instead of replaced by checklist');
+check_booking(str_contains(booking_followup(booking_validate([])),'Where would you like to go?'),'Fallback asks one clear question at a time');

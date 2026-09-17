@@ -16,7 +16,7 @@ if(($state['expires']??0)<time())$state=[];
 $messages=$state['messages']??[];$messages[]=['role'=>'user','content'=>$message];$messages=array_slice($messages,-12);
 $current=$state['draft']??[];
 if(isset($_POST['draft'])){try{$raw=json_decode(field('draft',20000),true,32,JSON_THROW_ON_ERROR);}catch(Throwable $e){throw new RuntimeException('The trip details could not be read. Please refresh and try again.');}if(!is_array($raw))throw new RuntimeException('Invalid trip details.');$current=booking_validate($raw)['draft'];}
-$result=assistant_resolve(booking_respond($messages,$current),$current);
+$result=assistant_resolve(assistant_local_reply($message,$current)??booking_respond($messages,$current),$current);
 $result['show_review']=$result['ready']&&($result['intent']==='booking'||!empty($state['show_review']));
 $messages[]=['role'=>'assistant','content'=>$result['reply']];
 $_SESSION['booking_chat']=['messages'=>$messages,'draft'=>$result['draft'],'show_review'=>$result['show_review'],'lookup_kind'=>in_array($result['intent'],['vehicles','drivers'])?$result['intent']:null,'lookup'=>$result['lookup'],'expires'=>time()+1800];
