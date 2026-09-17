@@ -240,6 +240,18 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
             check('session token expired' in assistant_post({'message':'Book a van','csrf':'bad'}),'Assistant enforces CSRF')
             check('not connected' in assistant_post({'message':'Book a van'}),'Unconfigured assistant fails clearly without making a booking')
             check('reset' in assistant_post({'mode':'reset'}),'Assistant supports clearing conversation')
+            popup=json.loads(assistant_post({'mode':'popup','message':'How do I request personnel?'}))
+            check('Personnel requisitions' in popup['reply'],'Header popup answers help questions rather than tracking them')
+            popup=json.loads(assistant_post({'mode':'popup','message':'Hello!'}))
+            check('Hello!' in popup['reply'],'Header popup supports conversation without AI configuration')
+            check('session token expired' in assistant_post({'mode':'popup','message':'Hello!','csrf':'bad'}),'Header popup requires CSRF')
+
+            tracking=json.loads(assistant_post({'mode':'tracking','message':'PR-2026-999999'}))
+            check(tracking['items']==[] and 'can access' in tracking['reply'],'Tracking conversation handles unknown references without exposing records')
+            tracking_follow=json.loads(assistant_post({'mode':'tracking','message':'Has it started?'}))
+            check(tracking_follow['items']==[],'Tracking follow-up uses remembered reference safely')
+            check('session token expired' in assistant_post({'mode':'tracking','message':'PR-2026-999999','csrf':'bad'}),'Conversational tracking enforces CSRF')
+
             day=(datetime.now()-timedelta(days=5)).strftime('%Y-%m-%d')
             data={'action':'save_request','vehicle_type':'SUV','passengers':'Ana Flores, Test Guest','start_datetime':day+'T08:00','end_datetime':day+'T12:00','destination':'HTTP Integration Test','purpose':'Complete workflow test','fuel_quantity':'5','office_id':'3','submit_mode':'submit'}
             places=['First office, Baler','Second office, San Luis','Final stop '+('x'*230)]

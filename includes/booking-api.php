@@ -3,6 +3,8 @@ require_once __DIR__.'/booking-assistant.php';
 require_once __DIR__.'/assistant-tools.php';
 if($_SERVER['REQUEST_METHOD']!=='POST'){http_response_code(405);header('Allow: POST');echo json_encode(['error'=>'POST required.']);return;}
 check_csrf();
+if(($_POST['mode']??'')==='popup'){require __DIR__.'/tracking-popup-api.php';return;}
+if(($_POST['mode']??'')==='tracking'){require __DIR__.'/tracking-chat-api.php';return;}
 if(($_POST['mode']??'')==='reset'){unset($_SESSION['booking_chat']);if(($_SESSION['old_input']['return_to']??'')==='index.php?page=assistant')unset($_SESSION['old_input']);echo json_encode(['reset'=>true]);return;}
 if(($_POST['mode']??'')==='refresh'){
  auth_limit('assistant-refresh',(string)$user['id'],180,3600);$saved=$_SESSION['booking_chat']??[];
@@ -19,5 +21,5 @@ if(isset($_POST['draft'])){try{$raw=json_decode(field('draft',20000),true,32,JSO
 $result=assistant_resolve(assistant_local_reply($message,$current)??booking_respond($messages,$current),$current);
 $result['show_review']=$result['ready']&&($result['intent']==='booking'||!empty($state['show_review']));
 $messages[]=['role'=>'assistant','content'=>$result['reply']];
-$_SESSION['booking_chat']=['messages'=>$messages,'draft'=>$result['draft'],'show_review'=>$result['show_review'],'lookup_kind'=>in_array($result['intent'],['vehicles','drivers'])?$result['intent']:null,'lookup'=>$result['lookup'],'expires'=>time()+1800];
+$_SESSION['booking_chat']=['messages'=>$messages,'draft'=>$result['draft'],'show_review'=>$result['show_review'],'lookup_kind'=>in_array($result['intent'],['vehicles','drivers'])?$result['intent']:null,'lookup'=>$result['lookup'],'tracking_search'=>$result['tracking']['search']??($state['tracking_search']??''),'expires'=>time()+1800];
 echo json_encode($result,JSON_THROW_ON_ERROR);

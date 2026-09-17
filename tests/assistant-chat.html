@@ -7,7 +7,7 @@ window.fetch=async(url,options)=>{const data=options.body;if(data.get('mode')===
 </script><script src="../assets/js/booking-assistant.js"></script><script>
 (async()=>{const lines=[],check=(ok,label)=>{if(!ok)throw Error(label);lines.push('PASS: '+label);},settle=()=>new Promise(r=>setTimeout(r,50)),chat=document.querySelector('[data-booking-chat-form]'),panel=document.querySelector('[data-availability-panel]');
 try{
-const send=async()=>{chat.elements.message.value='Test question';chat.requestSubmit();await settle();};
+const send=async()=>{chat.elements.message.value='Test question';chat.requestSubmit();check(document.querySelector('[data-assistant-thinking]').closest('[data-booking-messages]')&&!document.querySelector('[data-assistant-thinking]').hidden,'Thinking indicator appears inside chat while waiting');await settle();check(document.querySelector('[data-assistant-thinking]').hidden,'Thinking indicator clears after response');};
 await send();check(panel.closest('.booking-message.assistant')&&panel.closest('[data-booking-messages]'),'Results appear inside an assistant chat message');check(panel.querySelectorAll('.assistant-resource').length===1,'Vehicle cards render inside message');
 const host=panel.parentElement;document.querySelector('[data-availability-refresh]').click();await settle();check(panel.parentElement===host&&panel.querySelector('.badge').textContent==='Unavailable','Refresh updates same chat message');
 await send();check(!panel.hidden&&document.querySelector('[data-availability-refresh]').hidden,'Follow-up retains previous results and pauses old refresh');

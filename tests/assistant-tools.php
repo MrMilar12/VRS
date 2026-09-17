@@ -30,3 +30,19 @@ $thanks=assistant_resolve(assistant_local_reply('Salamat po!',$current),$current
 check_tool(str_contains($thanks['reply'],'welcome')&&$thanks['draft']===$current,'Thanks does not restart booking');
 check_tool(assistant_local_reply('Change my destination to Manila',$current)===null,'Booking corrections continue to AI extraction');
 check_tool(str_contains(assistant_help('reminders'),'Unfinished work stays visible'),'Help describes persistent overview reminders');
+require __DIR__.'/../includes/url-security.php';
+function auth_key(): string {return str_repeat('t',32);}
+$user=one('SELECT * FROM users WHERE id=3');
+$hidden=assistant_track(['search'=>'SECRET-TRIP']);
+check_tool(!$hidden['items']&&!str_contains($hidden['reply'],'PRIVATE'),'Tracking hides another requester records');
+$user=one('SELECT * FROM users WHERE id=1');
+$found=assistant_track(['search'=>'SECRET-TRIP']);
+check_tool(count($found['items'])===1&&$found['items'][0]['status']==='Completed'&&str_contains($found['items'][0]['url'],'v1_'),'Authorized tracking returns live status and protected link');
+run("UPDATE requisitions SET status='Approved' WHERE reference='SECRET-TRIP'");
+$follow=assistant_track([], 'SECRET-TRIP');
+check_tool($follow['items'][0]['status']==='Approved','Follow-up reloads current database status');
+$user=one('SELECT * FROM users WHERE id=3');
+check_tool(!assistant_track([],'SECRET-TRIP')['items'],'Remembered search cannot bypass authorization');
+run("INSERT INTO personnel_bookings(reference,requester_id,office_id,requested_role,destination,purpose,start_datetime,end_datetime,status,created_at) VALUES('PR-2026-123',3,1,'Utility','Test tracking place','Work','2026-09-17 10:00:00','2026-09-17 11:00:00','Approved','2026-09-17 09:00:00')");
+check_tool(assistant_track(['search'=>'PR-2026-123'])['items'][0]['kind']==='Personnel','Tracking includes authorized personnel requests');
+check_tool(assistant_track([])['items']===[],'Ambiguous first tracking question requests a reference');

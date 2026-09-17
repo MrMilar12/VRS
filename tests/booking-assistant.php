@@ -41,3 +41,7 @@ $natural='Baler sounds good. What date and time would you like to leave?';
 $conversational=booking_parse_ollama_response(['done'=>true,'message'=>['content'=>json_encode(['intent'=>'booking','topic'=>'booking','lookup'=>[],'reply'=>$natural,'draft'=>['destination'=>'Baler']])]]);
 check_booking(str_contains($conversational['reply'],$natural)&&!$conversational['ready'],'Natural follow-up is retained instead of replaced by checklist');
 check_booking(str_contains(booking_followup(booking_validate([])),'Where would you like to go?'),'Fallback asks one clear question at a time');
+$wrapped=json_encode(['intent'=>'system','topic'=>'approval','lookup'=>[],'reply'=>'Here is how approval works.','draft'=>[]]);
+foreach(["```json\n$wrapped\n```","Here is the response:\n$wrapped", "\xEF\xBB\xBF$wrapped"] as $output){$parsed=booking_parse_ollama_response(['done'=>true,'message'=>['content'=>$output]]);check_booking($parsed['intent']==='system'&&$parsed['topic']==='approval','Wrapped JSON is normalized without changing validated intent');}
+$quoted=json_encode(['reply'=>'A quoted "name" and {braces}.','draft'=>[]]);check_booking(booking_decode_reply('Response: '.$quoted)['reply']==='A quoted "name" and {braces}.','JSON extraction respects braces and quotes inside strings');
+foreach(['not JSON','{"reply":"broken"', $wrapped."\n".$wrapped,'[]'] as $bad){$caught=false;try{booking_decode_reply($bad);}catch(BookingResponseFormatException $e){$caught=true;}check_booking($caught,'Malformed or ambiguous output remains rejected');}

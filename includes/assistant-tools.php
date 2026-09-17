@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__.'/assistant-tracking.php';
 // Read-only answers: no model-generated SQL and no trip/personnel contact data.
 function assistant_help(string $topic): string {
  return match($topic){
@@ -48,11 +49,12 @@ function assistant_availability(string $kind,array $lookup): array {
  $count=count($items);$label=$live?'right now':date('M j, Y g:i A',strtotime($start)).' – '.date('M j, Y g:i A',strtotime($end));
  return ['kind'=>$kind,'lookup'=>$lookup,'live'=>$live,'checked_at'=>$now,'period'=>$label,'available_count'=>$available,'unavailable_count'=>$unavailable,'total'=>$count,'items'=>array_slice($items,0,50),'reply'=>($count?"Found $count matching $kind":"No matching $kind found").' for '.$label.'. '.($count>50?'Showing the first 50; narrow your search. ':'').'These are live availability checks, not reservations.'];
 }
-function assistant_resolve(array $result,array $current): array {
+function assistant_resolve(array $result,array $current,?string $trackingSearch=null): array {
  $intent=$result['intent'];$result['availability']=null;
  if($intent!=='booking'){
   $result=array_replace($result,booking_validate($current));
   if(in_array($intent,['vehicles','drivers'])){$result['availability']=assistant_availability($intent,$result['lookup']);$result['reply']=$result['availability']['reply'];}
+  elseif($intent==='tracking'){$result['tracking']=assistant_track($result['lookup'],$trackingSearch??($_SESSION['booking_chat']['tracking_search']??''));$result['reply']=$result['tracking']['reply'];}
   elseif($intent==='system'){$result['reply']=assistant_help($result['topic']);if($result['topic']==='booking'&&!$result['ready'])$result['reply'].="\n\n".booking_followup($result);}
   elseif(trim($result['reply']??'')==='')$result['reply']=assistant_help('overview');
  }

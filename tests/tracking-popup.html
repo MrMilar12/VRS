@@ -1,0 +1,15 @@
+<!doctype html><meta charset="utf-8"><title>Header question routing checks</title>
+<div data-assistant-island><form class="header-tracking-search"><input name="q"><button>Search</button></form></div>
+<aside id="header-help-popup" hidden><button data-header-help-close>Close</button><div data-header-help-log></div><form data-header-help-form><input name="csrf" value="test"><textarea name="message" required></textarea><button type="submit">Send</button><p data-header-help-status></p></form></aside><pre id="results">RUNNING</pre>
+<script>let calls=[];window.fetch=async(url,options)=>{calls.push(Object.fromEntries(options.body));return {ok:true,json:async()=>({reply:'You can request personnel from the personnel form.',items:[],availability:null})};};</script><script src="../assets/js/tracking-popup.js"></script><script>
+(async()=>{const lines=[],check=(ok,label)=>{if(!ok)throw Error(label);lines.push('PASS: '+label);},settle=()=>new Promise(r=>setTimeout(r,30));const header=document.querySelector('.header-tracking-search'),popup=document.querySelector('aside'),form=document.querySelector('[data-header-help-form]');
+try{
+check(popup.hidden&&!document.querySelector('[data-assistant-island-toggle]'),'Collapsed island only shows normal search');
+
+for(const query of ['PR-2026-001','Ana Cruz','Baler']){header.elements.q.value=query;const event=new Event('submit',{cancelable:true});header.dispatchEvent(event);check(!event.defaultPrevented&&popup.hidden,'Plain tracking stays on search: '+query);}
+header.elements.q.value='How do I request personnel?';const event=new Event('submit',{cancelable:true});header.dispatchEvent(event);check(popup.querySelector('[data-header-help-log] .header-help-thinking'),'Popup thinking appears inside conversation');check(!popup.querySelector('[data-header-help-status]').textContent,'No thinking text outside popup chat');await settle();check(!popup.querySelector('.header-help-thinking'),'Popup thinking clears after reply');check(event.defaultPrevented&&!popup.hidden&&calls[0].mode==='popup','Question expands search into assistant');check(document.querySelector('[data-assistant-island]').classList.contains('is-expanded')&&popup.style.top,'Expanded assistant originates at search area');
+check(popup.textContent.includes('personnel form'),'Answer renders in popup');form.elements.message.value='Who can approve it?';form.requestSubmit();await settle();check(calls.length===2&&calls[1].message==='Who can approve it?','Follow-up stays in popup conversation');
+popup.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));check(popup.hidden&&!document.querySelector('[data-assistant-island]').classList.contains('is-expanded'),'Escape restores normal search');
+header.elements.q.value='Paano mag request?';header.dispatchEvent(new Event('submit',{cancelable:true}));await settle();check(!popup.hidden&&calls.length===3,'Filipino question opens popup');lines.push('ALL CHECKS PASSED');
+}catch(error){lines.push('FAIL: '+error.message);}document.getElementById('results').textContent=lines.join('\n');})();
+</script>
