@@ -11,18 +11,44 @@
  window.addEventListener('resize',position);window.addEventListener('scroll',position,{passive:true});
  function isQuestion(text){
   if(/^(?:[A-Z]+-)?\d[\w-]*$/i.test(text))return false;
-  return /[?？]/u.test(text)||/^(how|what|why|when|where|who|which|can|could|would|should|is|are|do|does|did|has|have|will|please|help|explain|tell me|show me|paano|ano|bakit|kailan|saan|sino|pwede|puwede|maaari|mayroon|meron)\b/i.test(text)||/^(hi|hello|hey|kumusta|kamusta|good morning|good afternoon|good evening)[!. ]*$/i.test(text);
+  // Keep slip references on the normal tracking route, while natural-language
+  // booking requests open the assistant directly from the island.
+  return /[?？]/u.test(text)||/^(how|what|why|when|where|who|which|can|could|would|should|is|are|do|does|did|has|have|will|please|help|explain|tell me|show me|book|booking|reserve|reservation|vehicle|car|van|driver|personnel|trip|ride|travel|availability|available|schedule|request|paano|ano|bakit|kailan|saan|sino|pwede|puwede|maaari|mayroon|meron)\b/i.test(text)||/^(hi|hello|hey|kumusta|kamusta|good morning|good afternoon|good evening)[!. ]*$/i.test(text);
+ }
+ const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+ let phase='closed',motion=[],finishMotion=null;
+ function settle(){
+  const finish=finishMotion;finishMotion=null;
+  motion.forEach(animation=>animation.cancel());motion=[];
+  finish?.();
+ }
+ function frame(rect,radius){return {left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px',borderRadius:radius+'px'};}
+ function morph(opening,finish){
+  if(!island||reducedMotion.matches||typeof popup.animate!=='function'){finish();return;}
+  const pill=header.getBoundingClientRect(),panel=popup.getBoundingClientRect();
+  const compact=frame(pill,pill.height/2),expanded=frame(panel,24);
+  const overshoot=frame({left:panel.left-3,top:panel.top,width:panel.width+6,height:panel.height+6},26);
+  finishMotion=finish;
+  const shell=popup.animate(opening?[compact,{...overshoot,offset:.72},expanded]:[expanded,compact],{duration:opening?620:380,easing:opening?'cubic-bezier(.22,.8,.25,1)':'cubic-bezier(.4,0,.2,1)',fill:'both'});
+  motion.push(shell);
+  // Animate the surface bounds; fade content separately so text never stretches.
+  for(const child of popup.children)motion.push(child.animate(opening?[{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'translateY(0)'}]:[{opacity:1},{opacity:0}],{duration:opening?230:100,delay:opening?240:0,fill:'both',easing:'ease-out'}));
+  shell.finished.then(()=>{if(finishMotion===finish)settle();},()=>{});
  }
  function open(){
-  const opening=popup.hidden;if(opening)opener=document.activeElement;
+  if(phase==='open'||phase==='opening')return;
+  settle();opener=document.activeElement;phase='opening';
   popup.hidden=false;position();island?.classList.add('is-expanded');header.setAttribute('aria-expanded','true');
-  if(opening&&island&&typeof popup.animate==='function'&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
-   const rect=island.getBoundingClientRect(),target=popup.getBoundingClientRect();
-   popup.animate([{opacity:.6,transform:'scale('+Math.min(1,rect.width/target.width)+', '+Math.min(1,rect.height/target.height)+')',borderRadius:'28px'},{opacity:1,transform:'scale(1,1)',borderRadius:'24px'}],{duration:320,easing:'cubic-bezier(.2,.8,.2,1)'});
-  }
-  form.elements.message.focus();log.scrollTop=log.scrollHeight;
+  morph(true,()=>{phase='open';form.elements.message.focus({preventScroll:true});log.scrollTop=log.scrollHeight;});
  }
- function close(){popup.hidden=true;island?.classList.remove('is-expanded');header.setAttribute('aria-expanded','false');opener?.focus();}
+ function close(){
+  if(phase==='closed'||phase==='closing')return;
+  settle();phase='closing';
+  morph(false,()=>{popup.hidden=true;phase='closed';island?.classList.remove('is-expanded');header.setAttribute('aria-expanded','false');opener?.focus({preventScroll:true});});
+ }
+ window.addEventListener('resize',()=>{settle();position();});
+ window.addEventListener('scroll',()=>{settle();position();},{passive:true});
+ reducedMotion.addEventListener('change',settle);
  popup.querySelector('[data-header-help-close]').addEventListener('click',close);popup.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();close();}});
  const bubble=(speaker,text)=>{const node=document.createElement('article'),title=document.createElement('strong'),body=document.createElement('p');node.className='header-help-message'+(speaker==='You'?' from-user':'');title.textContent=speaker;body.textContent=text;node.append(title,body);log.append(node);return node;};
  async function ask(question){

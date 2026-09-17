@@ -66,7 +66,8 @@ function assistant_local_reply(string $message,array $current): ?array {
  $text=mb_strtolower(trim($message));$topic=null;$reply=null;
  if(preg_match('/^(hi|hello|hey|good morning|good afternoon|good evening|kumusta|kamusta|hello po|hi po)[!?. ]*$/u',$text))$reply='Hello! I can help plan a vehicle trip or answer questions about VPRS. What would you like help with?';
  elseif(preg_match('/^(thanks|thank you|salamat|salamat po)[!?. ]*$/u',$text))$reply='You’re welcome! You can ask another question or continue planning your trip.';
+ elseif(preg_match('/\b(book|booking|reserve|reservation|request)\b.*\b(vehicle|car|van|trip|ride)\b|\b(vehicle|car|van|trip|ride)\b.*\b(book|booking|reserve|reservation|request)\b/u',$text))$reply='I can prepare a vehicle request for you. Please tell me the destination, departure date and time, return date and time, vehicle type, passengers, and purpose.';
  elseif(in_array($text,['help','what can you do?','how do i use the booking assistant?','how does approval work?','how do i request personnel?','how do i track my request?','what appears on overview?'],true))$topic=match($text){'how does approval work?'=>'approval','how do i request personnel?'=>'personnel','how do i track my request?'=>'tracking','what appears on overview?'=>'reminders',default=>'overview'};
  if($reply===null&&$topic===null)return null;
- return ['intent'=>$topic?'system':'conversation','topic'=>$topic??'overview','lookup'=>[],'reply'=>$reply??assistant_help($topic),...booking_validate($current)];
+ return ['intent'=>$topic?'system':(str_contains($reply??'','vehicle request')?'booking':'conversation'),'topic'=>$topic??'overview','lookup'=>[],'reply'=>$reply??assistant_help($topic),...booking_validate($current)];
 }
