@@ -9,11 +9,15 @@ $target='index.php';$transaction=false;$uploaded=null;$saveError=null;
 try{
  check_csrf();$action=field('action',40);$overrideRequested=$action==='override_approve';
  if($overrideRequested){require_role('Administrator');$action='approve';}
- if($action==='review_registration'||($action==='save_record'&&($_POST['entity']??'')==='users')){require_role('Administrator');auth_limit('account-review',(string)$user['id'],5,900);if(!password_verify(auth_input('confirmation_password',200),$user['password_hash']))throw new RuntimeException('Confirm your administrator password to manage accounts.');auth_clear_limit('account-review',(string)$user['id']);}
+ if($action==='review_registration'||(in_array($action,['save_record','delete_record'],true)&&($_POST['entity']??'')==='users')){require_role('Administrator');auth_limit('account-review',(string)$user['id'],5,900);if(!password_verify(auth_input('confirmation_password',200),$user['password_hash']))throw new RuntimeException('Confirm your administrator password to manage accounts.');auth_clear_limit('account-review',(string)$user['id']);}
  if($action==='logout'){$_SESSION=[];session_destroy();redirect('login.php');}
  if(str_starts_with($action,'factor_')){require __DIR__.'/includes/profile-auth-actions.php';}
  lock_transaction();$transaction=true;
- if($action==='personnel_save'){
+ if($action==='delete_record'){
+  $entity=field('entity',40);$id=number('id',1);
+  if(field('confirm_delete',1)!=='1')throw new RuntimeException('Confirm deletion before continuing.');
+  delete_record($entity,$id);$target='index.php?page='.deletion_entities()[$entity][1];unset($_SESSION['old_input']);flash('Record deleted.');
+ }elseif($action==='personnel_save'){
   $id=personnel_save();$target='index.php?page=personnel-request&id='.$id;flash('Personnel requisition saved.');
  }elseif(str_starts_with($action,'personnel_')){
   $id=number('id',1);$target='index.php?page=personnel-request&id='.$id;personnel_transition($id,substr($action,10));unset($_SESSION['old_input']);flash('Personnel requisition updated.');
@@ -97,7 +101,7 @@ try{
  }elseif($action==='maintenance'){
   require_role('Administrator','Administrative Officer');$v=number('vehicle_id',1);if(!lock_record('vehicles',$v))throw new RuntimeException('Vehicle not found.');$start=datetime_value('start_datetime');$end=datetime_value('end_datetime');if($end<=$start)throw new RuntimeException('End must be after start.');if(conflicts($v,0,$start,$end))throw new RuntimeException('This maintenance block overlaps an assignment or another block.');run('INSERT INTO vehicle_blocks(vehicle_id,start_datetime,end_datetime,reason,created_by) VALUES(?,?,?,?,?)',[$v,$start,$end,field('reason',1000),$user['id']]);audit('Maintenance scheduled','Vehicle #'.$v);$target='index.php?page=maintenance';flash('Maintenance block added.');
  }elseif($action==='delete_block'){
-  require_role('Administrator','Administrative Officer');$id=number('id',1);run('DELETE FROM vehicle_blocks WHERE id=?',[$id]);audit('Maintenance block removed','Block #'.$id);$target='index.php?page=maintenance';flash('Maintenance block removed.');
+  require_role('Administrator','Administrative Officer');$id=number('id',1);delete_record('vehicle_blocks',$id);$target='index.php?page=maintenance';flash('Maintenance block removed.');
  }elseif($action==='settings'){
   require_role('Administrator');$minutes=number('turnaround_minutes');if($minutes>1440)throw new RuntimeException('Turnaround must be between 0 and 1440 minutes.');foreach(['organization','supervisor_signatory','admin_signatory','turnaround_minutes'] as $key)run('UPDATE system_settings SET setting_value=? WHERE setting_key=?',[field($key),$key]);audit('Settings updated');$target='index.php?page=settings';flash('Settings updated.');
  }elseif($action==='read_notifications'){run('UPDATE notifications SET is_read=1 WHERE user_id=?',[$user['id']]);$target='index.php?page=notifications';flash('Notifications marked as read.');}

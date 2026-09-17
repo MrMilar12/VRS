@@ -20,6 +20,7 @@ require_once __DIR__.'/database.php';
 require_once __DIR__.'/functions.php';
 require_once __DIR__.'/personnel.php';
 require_once __DIR__.'/records.php';
+require_once __DIR__.'/deletion.php';
 require_once __DIR__.'/auth.php';
 require_once __DIR__.'/url-security.php';
 try {

@@ -408,6 +408,46 @@ with tempfile.TemporaryDirectory(prefix='vrs-http-') as folder:
                         check(all('Calendar state '+state in schedule for state in confirmed) and all('Calendar state '+state not in schedule for state in hidden),'Printed fleet schedule excludes unapproved and cancelled trips')
                     else:
                         check(code==200 and f'Private calendar destination {uid}' in schedule and all(f'Private calendar destination {other[0]}' not in schedule for other in accounts if other[0]!=uid),role+' printed schedule contains only owned trips')
+            # Delete controls and endpoint permissions use a disposable fixture for each record type.
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                office_delete=db.execute("INSERT INTO offices(code,name,status) VALUES('DELETE-HTTP','Delete HTTP office','Active')").lastrowid
+                user_delete=db.execute("INSERT INTO users(full_name,email,password_hash,role,office_id,status) SELECT 'Delete HTTP user','delete-http@example.test',password_hash,'Requester',1,'Pending' FROM users WHERE id=1").lastrowid
+                note_delete=db.execute("INSERT INTO notifications(user_id,message,created_at) VALUES(1,'Delete HTTP note',datetime('now'))").lastrowid
+            code,office_page,_=admin.get('index.php?page=offices')
+            delete_url=html.unescape(re.search(r'href="([^"]*page=delete&amp;entity=offices[^"]+)"',office_page)[1])
+            check('id=v1_' in delete_url,'Delete links use protected record IDs')
+            code,confirmation,_=admin.get(delete_url)
+            check(code==200 and 'I confirm deletion' in confirmation and 'Delete HTTP office' in confirmation,'Delete opens a named confirmation page')
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                check(db.execute('SELECT count(*) FROM offices WHERE id=?',(office_delete,)).fetchone()[0]==1,'GET confirmation does not delete records')
+            text,_=admin.post('actions.php',{'action':'delete_record','entity':'offices','id':office_delete,'return_to':'index.php?page=offices'})
+            check('confirm delete' in text,'Deletion requires explicit confirmation')
+            text,_=admin.post('actions.php',{'action':'delete_record','entity':'offices','id':office_delete,'confirm_delete':'1','csrf':'bad','return_to':'index.php?page=offices'})
+            check('session token expired' in text,'Deletion enforces CSRF')
+            check(requester.get(f'index.php?page=delete&entity=offices&id={office_delete}')[0]==403,'Unauthorized delete confirmation denied')
+            text,_=requester.post('actions.php',{'action':'delete_record','entity':'offices','id':office_delete,'confirm_delete':'1'})
+            check('permission' in text,'Forged record deletion denied')
+            admin.get('index.php?page=offices')
+            text,url=admin.post('actions.php',{'action':'delete_record','entity':'offices','id':office_delete,'confirm_delete':'1'})
+            check('Record deleted.' in text and 'page=offices' in url,'Confirmed delete returns to the record list')
+            with sqlite3.connect(app/'storage/demo.sqlite') as db:
+                check(db.execute('SELECT count(*) FROM offices WHERE id=?',(office_delete,)).fetchone()[0]==0,'Confirmed office deletion persisted')
+            code,confirmation,_=admin.get('index.php?page=delete&entity=vehicles&id=1')
+            check('linked to other records' in confirmation and 'name="confirm_delete"' not in confirmation,'Linked vehicle has explanation and no destructive submit')
+            admin.get(f'index.php?page=delete&entity=users&id={user_delete}')
+            text,_=admin.post('actions.php',{'action':'delete_record','entity':'users','id':user_delete,'confirm_delete':'1','confirmation_password':'wrong','return_to':f'index.php?page=delete&entity=users&id={user_delete}'})
+            check('Confirm your administrator password' in text,'User deletion requires administrator password')
+            text,_=admin.post('actions.php',{'action':'delete_record','entity':'users','id':user_delete,'confirm_delete':'1','confirmation_password':'Demo@12345'})
+            check('Record deleted.' in text,'Unused user deleted after password confirmation')
+            check(requester.get(f'index.php?page=delete&entity=notifications&id={note_delete}')[0]==403,'Notification delete cannot access another user message')
+            admin.get('index.php?page=notifications')
+            text,_=admin.post('actions.php',{'action':'delete_record','entity':'notifications','id':note_delete,'confirm_delete':'1'})
+            check('Record deleted.' in text and 'Delete HTTP note' not in text,'Notification delete removes only the selected message')
+            for entity,record_id in [('requisitions',multi_id),('personnel_bookings',personnel_multi_id)]:
+                code,confirmation,_=requester.get(f'index.php?page=delete&entity={entity}&id={record_id}')
+                check(code==200 and 'name="confirm_delete"' in confirmation,'Requester can confirm own draft deletion: '+entity)
+                text,_=requester.post('actions.php',{'action':'delete_record','entity':entity,'id':record_id,'confirm_delete':'1'})
+                check('Record deleted.' in text,'Requester deletes own draft: '+entity)
             anonymous=Client(base)
             check(anonymous.get('api.php?action=calendar')[0]==401,'Calendar API requires sign-in')
             original_config=(app/'config/system.php').read_text()

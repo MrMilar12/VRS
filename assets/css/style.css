@@ -245,3 +245,5 @@ a.profile{color:inherit;text-decoration:none;border-radius:8px}a.profile:focus-v
 
 .progress-schedule{margin:0;display:grid;gap:12px}.progress-schedule div{min-width:0}.progress-schedule dt{font-size:11px;opacity:.75}.progress-schedule dd{margin:4px 0 0;font-size:13px;font-weight:600}
 .destinations-field{display:grid;gap:12px}.destinations-title{font-size:12px;font-weight:600;margin:0}.destinations-field>p{margin:0}.destination-row{display:flex;align-items:flex-start;gap:10px}.destination-input{flex:1;min-width:0}.destination-input>input{width:100%;margin-top:8px}.destination-input .place-combobox{margin-top:8px}.destination-row>[data-destination-remove]{margin-top:25px;flex-shrink:0}.destinations-field>[data-destination-add]{justify-self:start}.destination-preview summary{cursor:pointer;font-size:11px;color:inherit}.destination-preview{margin-top:8px}.destination-input [role=status]:empty{display:none}
+
+.record-delete-action{margin:12px 0}.notification-item{display:flex;align-items:center;gap:12px}.notification-item .notification-row{flex:1;min-width:0}.notification-item>.btn{flex-shrink:0;margin-right:16px}
