@@ -1,15 +1,359 @@
-*{box-sizing:border-box}
-:root{color-scheme:light;--ink:#26352e;--muted:#59685f;--green:#254d3e;--line:#bbc8be;--wash:#eff3ef}
-body{margin:0;background:#e9eeea;color:var(--ink);font:12px/1.45 Arial,Helvetica,sans-serif}
-p,h1,h2{margin:0}strong{font-weight:600}
-.print-toolbar{max-width:8.5in;margin:20px auto;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:0 8px;font-size:13px}.print-toolbar a{color:var(--green);text-decoration:none}.print-toolbar button{padding:11px 18px;border:0;border-radius:6px;background:var(--green);color:#fff;font:600 13px Arial,sans-serif;cursor:pointer}.print-toolbar button:disabled{opacity:.65;cursor:wait}.print-toolbar :is(a,button):focus-visible{outline:3px solid #829e71;outline-offset:3px}[data-qr-status]:empty{display:none}
-.personnel-slip{width:8.5in;min-height:11in;margin:0 auto 30px;padding:32px 38px 24px;background:#fff;box-shadow:0 5px 24px #263e3012}
-.slip-header{display:flex;align-items:center;justify-content:space-between;gap:24px;padding-bottom:13px;margin-bottom:16px;border-bottom:2px solid var(--green);break-inside:avoid}.slip-header>div{min-width:0}.organization-name{font-size:13px;font-weight:600;overflow-wrap:anywhere;margin-bottom:5px}.slip-header h1{font-size:22px;line-height:1.2;color:var(--green);letter-spacing:.4px}.document-reference{font-size:11px;margin-top:9px;color:var(--muted)}.document-reference span{margin:0 7px}.personnel-qr{margin:0;width:94px;flex-shrink:0;text-align:center}.personnel-qr svg{display:block;width:94px;height:94px;background:#fff}.personnel-qr figcaption{font-size:8px;margin-top:2px;overflow-wrap:anywhere}
-.form-section{margin-top:15px}.form-section h2{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 10px;border:1px solid var(--line);border-bottom:0;background:var(--wash);color:var(--green);font-size:12px;font-weight:700;break-after:avoid}.form-section h2 small{font-size:10px;font-weight:400;color:var(--muted)}
-table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:11px}th,td{border:1px solid var(--line);padding:7px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;line-height:1.45}.details-table th{width:30%;font-weight:400;color:var(--muted);background:#fafbf9}.details-table td{color:var(--ink)}.personnel-table thead{display:table-header-group}.personnel-table th{font-size:10px;font-weight:600;background:#fafbf9}.personnel-table td{font-size:11px}.preference-table{margin-bottom:-1px}.name-column{width:30%}.employee-column{width:19%}.classification-column{width:20%}tr{break-inside:avoid}tr.long-text{break-inside:auto}
-.signatures{display:grid;grid-template-columns:1fr 1fr;gap:36px;padding:15px 10px 2px;break-inside:avoid}.signatures p{font-size:11px;color:var(--muted)}.signature-line{height:33px;border-bottom:1px solid #819286;margin-bottom:6px}.signatures strong{display:block;font-size:11px;overflow-wrap:anywhere}.signatures small{display:block;font-size:9px;color:var(--muted);margin-top:2px}
-.slip-footer{border-top:1px solid var(--line);margin-top:20px;padding-top:9px;font-size:9px;color:var(--muted);text-align:right;break-inside:avoid}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-@media screen and (max-width:850px){.personnel-slip{width:calc(100% - 24px);min-height:0;padding:24px}.print-toolbar{margin:16px 12px}}
-@media screen and (max-width:520px){.personnel-slip{padding:16px}.slip-header{gap:12px;align-items:flex-start}.slip-header h1{font-size:18px}.organization-name{font-size:11px}.personnel-qr,.personnel-qr svg{width:80px}.personnel-qr svg{height:80px}.document-reference{font-size:10px}.document-reference span{margin:0 3px}.details-table th{width:36%}th,td{padding:7px 6px}.personnel-table th{font-size:9px}.personnel-table td{font-size:10px}.signatures{gap:20px;padding-inline:0}}
-@media print{@page{size:Letter portrait;margin:.45in}body{background:#fff}.print-toolbar{display:none!important}.personnel-slip{width:100%;min-height:0;margin:0;padding:0;box-shadow:none}.slip-header{margin-bottom:12px}.form-section{margin-top:12px}.form-section h2,.personnel-qr{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
-@media print{th,td{padding:5px 9px;line-height:1.35}.form-section{margin-top:10px}.form-section h2{padding:6px 9px}.signatures{padding-top:12px}.signature-line{height:27px}.slip-footer{margin-top:14px}.personnel-qr,.personnel-qr svg{width:84px}.personnel-qr svg{height:84px}}
+* {
+  box-sizing: border-box;
+}
+:root {
+  color-scheme: light;
+  --ink: #26352e;
+  --muted: #59685f;
+  --green: #254d3e;
+  --line: #bbc8be;
+  --wash: #eff3ef;
+}
+body {
+  margin: 0;
+  background: #e9eeea;
+  color: var(--ink);
+  font:
+    12px/1.45 Arial,
+    Helvetica,
+    sans-serif;
+}
+p,
+h1,
+h2 {
+  margin: 0;
+}
+strong {
+  font-weight: 600;
+}
+.print-toolbar {
+  max-width: 8.5in;
+  margin: 20px auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px;
+  font-size: 13px;
+}
+.print-toolbar a {
+  color: var(--green);
+  text-decoration: none;
+}
+.print-toolbar button {
+  padding: 11px 18px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--green);
+  color: #fff;
+  font:
+    600 13px Arial,
+    sans-serif;
+  cursor: pointer;
+}
+.print-toolbar button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.print-toolbar :is(a, button):focus-visible {
+  outline: 3px solid #829e71;
+  outline-offset: 3px;
+}
+[data-qr-status]:empty {
+  display: none;
+}
+.personnel-slip {
+  width: 8.5in;
+  min-height: 11in;
+  margin: 0 auto 30px;
+  padding: 32px 38px 24px;
+  background: #fff;
+  box-shadow: 0 5px 24px #263e3012;
+}
+.slip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 13px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--green);
+  break-inside: avoid;
+}
+.slip-header > div {
+  min-width: 0;
+}
+.organization-name {
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  margin-bottom: 5px;
+}
+.slip-header h1 {
+  font-size: 22px;
+  line-height: 1.2;
+  color: var(--green);
+  letter-spacing: 0.4px;
+}
+.document-reference {
+  font-size: 11px;
+  margin-top: 9px;
+  color: var(--muted);
+}
+.document-reference span {
+  margin: 0 7px;
+}
+.personnel-qr {
+  margin: 0;
+  width: 94px;
+  flex-shrink: 0;
+  text-align: center;
+}
+.personnel-qr svg {
+  display: block;
+  width: 94px;
+  height: 94px;
+  background: #fff;
+}
+.personnel-qr figcaption {
+  font-size: 8px;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+.form-section {
+  margin-top: 15px;
+}
+.form-section h2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  background: var(--wash);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 700;
+  break-after: avoid;
+}
+.form-section h2 small {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--muted);
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  font-size: 11px;
+}
+th,
+td {
+  border: 1px solid var(--line);
+  padding: 7px 10px;
+  vertical-align: top;
+  text-align: left;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+.details-table th {
+  width: 30%;
+  font-weight: 400;
+  color: var(--muted);
+  background: #fafbf9;
+}
+.details-table td {
+  color: var(--ink);
+}
+.personnel-table thead {
+  display: table-header-group;
+}
+.personnel-table th {
+  font-size: 10px;
+  font-weight: 600;
+  background: #fafbf9;
+}
+.personnel-table td {
+  font-size: 11px;
+}
+.preference-table {
+  margin-bottom: -1px;
+}
+.name-column {
+  width: 30%;
+}
+.employee-column {
+  width: 19%;
+}
+.classification-column {
+  width: 20%;
+}
+tr {
+  break-inside: avoid;
+}
+tr.long-text {
+  break-inside: auto;
+}
+.signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 36px;
+  padding: 15px 10px 2px;
+  break-inside: avoid;
+}
+.signatures p {
+  font-size: 11px;
+  color: var(--muted);
+}
+.signature-line {
+  height: 33px;
+  border-bottom: 1px solid #819286;
+  margin-bottom: 6px;
+}
+.signatures strong {
+  display: block;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.signatures small {
+  display: block;
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.slip-footer {
+  border-top: 1px solid var(--line);
+  margin-top: 20px;
+  padding-top: 9px;
+  font-size: 9px;
+  color: var(--muted);
+  text-align: right;
+  break-inside: avoid;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media screen and (max-width: 850px) {
+  .personnel-slip {
+    width: calc(100% - 24px);
+    min-height: 0;
+    padding: 24px;
+  }
+  .print-toolbar {
+    margin: 16px 12px;
+  }
+}
+@media screen and (max-width: 520px) {
+  .personnel-slip {
+    padding: 16px;
+  }
+  .slip-header {
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .slip-header h1 {
+    font-size: 18px;
+  }
+  .organization-name {
+    font-size: 11px;
+  }
+  .personnel-qr,
+  .personnel-qr svg {
+    width: 80px;
+  }
+  .personnel-qr svg {
+    height: 80px;
+  }
+  .document-reference {
+    font-size: 10px;
+  }
+  .document-reference span {
+    margin: 0 3px;
+  }
+  .details-table th {
+    width: 36%;
+  }
+  th,
+  td {
+    padding: 7px 6px;
+  }
+  .personnel-table th {
+    font-size: 9px;
+  }
+  .personnel-table td {
+    font-size: 10px;
+  }
+  .signatures {
+    gap: 20px;
+    padding-inline: 0;
+  }
+}
+@media print {
+  @page {
+    size: Letter portrait;
+    margin: 0.45in;
+  }
+  body {
+    background: #fff;
+  }
+  .print-toolbar {
+    display: none !important;
+  }
+  .personnel-slip {
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  .slip-header {
+    margin-bottom: 12px;
+  }
+  .form-section {
+    margin-top: 12px;
+  }
+  .form-section h2,
+  .personnel-qr {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+@media print {
+  th,
+  td {
+    padding: 5px 9px;
+    line-height: 1.35;
+  }
+  .form-section {
+    margin-top: 10px;
+  }
+  .form-section h2 {
+    padding: 6px 9px;
+  }
+  .signatures {
+    padding-top: 12px;
+  }
+  .signature-line {
+    height: 27px;
+  }
+  .slip-footer {
+    margin-top: 14px;
+  }
+  .personnel-qr,
+  .personnel-qr svg {
+    width: 84px;
+  }
+  .personnel-qr svg {
+    height: 84px;
+  }
+}

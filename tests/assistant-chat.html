@@ -1,17 +1,119 @@
-<!doctype html><meta charset="utf-8"><title>Assistant chat availability checks</title>
-<div data-booking-assistant><div data-assistant-welcome></div><button data-booking-reset>Reset</button><div data-booking-messages><section data-availability-panel hidden><p data-availability-summary></p><button data-availability-refresh>Refresh</button><p data-availability-checked></p><div data-availability-items></div></section></div><div data-assistant-thinking hidden></div><form data-booking-chat-form><input name="csrf" value="test"><textarea name="message" required></textarea><button type="submit">Send</button></form><p data-booking-status></p><section data-booking-review-panel hidden><form data-booking-review><input name="start_datetime"><input name="end_datetime"><input name="fuel_allocation" type="checkbox"><input name="fuel_quantity" value="0"><button type="submit">Submit</button></form><p data-booking-review-status></p></section></div><pre id="results">RUNNING</pre>
+<!doctype html><meta charset="utf-8" /><title>Assistant chat availability checks</title>
+<div data-booking-assistant
+  ><div data-assistant-welcome></div><button data-booking-reset>Reset</button
+  ><div data-booking-messages
+    ><section data-availability-panel hidden
+      ><p data-availability-summary></p><button data-availability-refresh>Refresh</button
+      ><p data-availability-checked></p><div data-availability-items></div></section></div
+  ><div data-assistant-thinking hidden></div
+  ><form data-booking-chat-form
+    ><input name="csrf" value="test" /><textarea name="message" required></textarea
+    ><button type="submit">Send</button></form
+  ><p data-booking-status></p
+  ><section data-booking-review-panel hidden
+    ><form data-booking-review
+      ><input name="start_datetime" /><input name="end_datetime" /><input
+        name="fuel_allocation"
+        type="checkbox"
+      /><input name="fuel_quantity" value="0" /><button type="submit">Submit</button></form
+    ><p data-booking-review-status></p></section></div
+><pre id="results">RUNNING</pre>
 <script>
-let requestCount=0,refreshCount=0;
-const availability=()=>({reply:'Found 1 matching vehicle.',live:true,checked_at:'2026-09-17 11:20:16',items:[{name:'Test van',available:refreshCount===0,detail:'Van · 15 seats',reason:'Checked availability'}]});
-window.fetch=async(url,options)=>{const data=options.body;if(data.get('mode')==='refresh'){refreshCount++;return {ok:true,json:async()=>({availability:availability()})};}requestCount++;return {ok:true,json:async()=>({reply:requestCount===2?'Hello!':'Found 1 matching vehicle.',draft:{},ready:false,show_review:false,missing:['destination'],availability:requestCount===2?null:availability()})};};
-</script><script src="../assets/js/booking-assistant.js"></script><script>
-(async()=>{const lines=[],check=(ok,label)=>{if(!ok)throw Error(label);lines.push('PASS: '+label);},settle=()=>new Promise(r=>setTimeout(r,50)),chat=document.querySelector('[data-booking-chat-form]'),panel=document.querySelector('[data-availability-panel]');
-try{
-const send=async()=>{chat.elements.message.value='Test question';chat.requestSubmit();check(document.querySelector('[data-assistant-thinking]').closest('[data-booking-messages]')&&!document.querySelector('[data-assistant-thinking]').hidden,'Thinking indicator appears inside chat while waiting');await settle();check(document.querySelector('[data-assistant-thinking]').hidden,'Thinking indicator clears after response');};
-await send();check(panel.closest('.booking-message.assistant')&&panel.closest('[data-booking-messages]'),'Results appear inside an assistant chat message');check(panel.querySelectorAll('.assistant-resource').length===1,'Vehicle cards render inside message');
-const host=panel.parentElement;document.querySelector('[data-availability-refresh]').click();await settle();check(panel.parentElement===host&&panel.querySelector('.badge').textContent==='Unavailable','Refresh updates same chat message');
-await send();check(!panel.hidden&&document.querySelector('[data-availability-refresh]').hidden,'Follow-up retains previous results and pauses old refresh');
-await send();check(panel.closest('.booking-message')!==host&&host.textContent.includes('Found 1 matching vehicle.'),'New lookup uses latest message and preserves earlier summary');
-check(document.querySelectorAll('[data-availability-panel]').length===1,'No separate duplicate results panel');lines.push('ALL CHECKS PASSED');
-}catch(error){lines.push('FAIL: '+error.message);}document.getElementById('results').textContent=lines.join('\n');})();
+  let requestCount = 0,
+    refreshCount = 0;
+  const availability = () => ({
+    reply: 'Found 1 matching vehicle.',
+    live: true,
+    checked_at: '2026-09-17 11:20:16',
+    items: [
+      {
+        name: 'Test van',
+        available: refreshCount === 0,
+        detail: 'Van · 15 seats',
+        reason: 'Checked availability',
+      },
+    ],
+  });
+  window.fetch = async (url, options) => {
+    const data = options.body;
+    if (data.get('mode') === 'refresh') {
+      refreshCount++;
+      return { ok: true, json: async () => ({ availability: availability() }) };
+    }
+    requestCount++;
+    return {
+      ok: true,
+      json: async () => ({
+        reply: requestCount === 2 ? 'Hello!' : 'Found 1 matching vehicle.',
+        draft: {},
+        ready: false,
+        show_review: false,
+        missing: ['destination'],
+        availability: requestCount === 2 ? null : availability(),
+      }),
+    };
+  };</script
+><script src="../assets/js/booking-assistant.js"></script
+><script>
+  (async () => {
+    const lines = [],
+      check = (ok, label) => {
+        if (!ok) throw Error(label);
+        lines.push('PASS: ' + label);
+      },
+      settle = () => new Promise((r) => setTimeout(r, 50)),
+      chat = document.querySelector('[data-booking-chat-form]'),
+      panel = document.querySelector('[data-availability-panel]');
+    try {
+      const send = async () => {
+        chat.elements.message.value = 'Test question';
+        chat.requestSubmit();
+        check(
+          document.querySelector('[data-assistant-thinking]').closest('[data-booking-messages]') &&
+            !document.querySelector('[data-assistant-thinking]').hidden,
+          'Thinking indicator appears inside chat while waiting',
+        );
+        await settle();
+        check(
+          document.querySelector('[data-assistant-thinking]').hidden,
+          'Thinking indicator clears after response',
+        );
+      };
+      await send();
+      check(
+        panel.closest('.booking-message.assistant') && panel.closest('[data-booking-messages]'),
+        'Results appear inside an assistant chat message',
+      );
+      check(
+        panel.querySelectorAll('.assistant-resource').length === 1,
+        'Vehicle cards render inside message',
+      );
+      const host = panel.parentElement;
+      document.querySelector('[data-availability-refresh]').click();
+      await settle();
+      check(
+        panel.parentElement === host && panel.querySelector('.badge').textContent === 'Unavailable',
+        'Refresh updates same chat message',
+      );
+      await send();
+      check(
+        !panel.hidden && document.querySelector('[data-availability-refresh]').hidden,
+        'Follow-up retains previous results and pauses old refresh',
+      );
+      await send();
+      check(
+        panel.closest('.booking-message') !== host &&
+          host.textContent.includes('Found 1 matching vehicle.'),
+        'New lookup uses latest message and preserves earlier summary',
+      );
+      check(
+        document.querySelectorAll('[data-availability-panel]').length === 1,
+        'No separate duplicate results panel',
+      );
+      lines.push('ALL CHECKS PASSED');
+    } catch (error) {
+      lines.push('FAIL: ' + error.message);
+    }
+    document.getElementById('results').textContent = lines.join('\n');
+  })();
 </script>

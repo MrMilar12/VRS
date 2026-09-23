@@ -5,7 +5,7 @@ return [
     'demo' => true,
     'update_repository' => 'MrMilar12/VRS',
     'update_branch' => 'main',
-    'update_php_binary' => getenv('VRS_PHP_BINARY') ?: PHP_BINDIR.'/php',
+    'update_php_binary' => getenv('VRS_PHP_BINARY') ?: PHP_BINDIR . '/php',
     'booking_ai_provider' => getenv('BOOKING_AI_PROVIDER') ?: 'ollama',
     'ollama_url' => getenv('OLLAMA_URL') ?: 'https://ollama.com',
     'ollama_model' => getenv('OLLAMA_MODEL') ?: 'gpt-oss:20b',

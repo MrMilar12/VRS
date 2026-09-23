@@ -1,21 +1,176 @@
 <?php
-require __DIR__.'/../includes/functions.php';require __DIR__.'/../includes/database.php';require __DIR__.'/../includes/personnel.php';require __DIR__.'/../includes/auth.php';require __DIR__.'/../includes/deletion.php';
+require __DIR__ . '/../includes/functions.php';
+require __DIR__ . '/../includes/database.php';
+require __DIR__ . '/../includes/personnel.php';
+require __DIR__ . '/../includes/auth.php';
+require __DIR__ . '/../includes/deletion.php';
 date_default_timezone_set('Asia/Manila');
-$pdo=new PDO('sqlite::memory:',null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);$pdo->exec('PRAGMA foreign_keys=ON');initialize_database($pdo);personnel_schema($pdo);auth_schema($pdo);
-$admin=one('SELECT * FROM users WHERE id=1');$requester=one('SELECT * FROM users WHERE id=3');$user=$admin;
-function verify_delete(bool $ok,string $label): void {if(!$ok)throw new RuntimeException('FAIL: '.$label);echo 'PASS: '.$label."\n";}
-function perform_delete(string $entity,int $id): void {lock_transaction();try{delete_record($entity,$id);finish_transaction(true);}catch(Throwable $e){finish_transaction(false);throw $e;}}
-function refuse_delete(string $entity,int $id,string $label): void {try{perform_delete($entity,$id);}catch(RuntimeException $e){verify_delete(true,$label);return;}throw new RuntimeException('FAIL: '.$label);}
-refuse_delete('users',1,'Self deletion blocked');refuse_delete('users',3,'User with operational history protected');refuse_delete('offices',1,'Linked office protected');refuse_delete('vehicles',1,'Vehicle with trip history protected');refuse_delete('personnel',1,'Driver with trip history protected');refuse_delete('audit_logs',1,'Audit log deletion not exposed');
-run("INSERT INTO vehicles(model,type,plate,capacity,status) VALUES('Unused','Van','DELETE-TEST',8,'Available')");$vehicleId=(int)$pdo->lastInsertId();$user=$requester;refuse_delete('vehicles',$vehicleId,'Requester cannot delete fleet records');$user=$admin;perform_delete('vehicles',$vehicleId);verify_delete(!one('SELECT id FROM vehicles WHERE id=?',[$vehicleId]),'Unused vehicle deleted');
-run("INSERT INTO offices(code,name) VALUES('DEL','Unused office')");$officeId=(int)$pdo->lastInsertId();perform_delete('offices',$officeId);verify_delete(!one('SELECT id FROM offices WHERE id=?',[$officeId]),'Unused office deleted');
-run("INSERT INTO users(full_name,email,password_hash,role,office_id,status) VALUES('Unused user','delete@example.test','hash','Requester',1,'Pending')");$accountId=(int)$pdo->lastInsertId();run('INSERT INTO auth_preferences(user_id) VALUES(?)',[$accountId]);run("INSERT INTO auth_factors(user_id,secret_cipher,recovery_hashes) VALUES(?,'secret','[]')",[$accountId]);run("INSERT INTO notifications(user_id,message,created_at) VALUES(?,'Note',?)",[$accountId,date('Y-m-d H:i:s')]);perform_delete('users',$accountId);verify_delete(!one('SELECT user_id FROM auth_factors WHERE user_id=?',[$accountId])&&!one('SELECT user_id FROM auth_preferences WHERE user_id=?',[$accountId])&&!one('SELECT id FROM users WHERE id=?',[$accountId]),'Unused account and authentication records deleted');
-run("INSERT INTO drivers(full_name,employee_number,office_id,license_expiry,status) VALUES('Unused driver','DEL-DRIVER',1,'2030-01-01','Available')");$driverId=(int)$pdo->lastInsertId();personnel_schema($pdo);$person=one('SELECT * FROM personnel WHERE driver_id=?',[$driverId]);perform_delete('personnel',(int)$person['id']);personnel_schema($pdo);verify_delete(!one('SELECT id FROM drivers WHERE id=?',[$driverId])&&!one('SELECT id FROM personnel WHERE driver_id=?',[$driverId]),'Personnel and legacy driver deleted without reimport');
-run("INSERT INTO requisitions(reference,requester_id,office_id,vehicle_type,passengers,start_datetime,end_datetime,destination,purpose,status,created_at) VALUES('DELETE-REQUEST',3,1,'Van','Staff','2030-01-01 08:00:00','2030-01-01 12:00:00','Office','Work','Draft',?)",[date('Y-m-d H:i:s')]);$requestId=(int)$pdo->lastInsertId();$user=one('SELECT * FROM users WHERE id=2');refuse_delete('requisitions',$requestId,'Supervisor cannot delete another requester record');$user=$requester;
-foreach(['Pending Administrative Approval','Approved','Dispatched','Completed'] as $status){run('UPDATE requisitions SET status=? WHERE id=?',[$status,$requestId]);refuse_delete('requisitions',$requestId,'Protect requisition status '.$status);}
-run("UPDATE requisitions SET status='Rejected' WHERE id=?",[$requestId]);run("INSERT INTO approvals(requisition_id,user_id,stage,decision,created_at) VALUES(?,1,'Administrative','Rejected',?)",[$requestId,date('Y-m-d H:i:s')]);run("INSERT INTO notifications(user_id,message,requisition_id,created_at) VALUES(3,'Note',?,?)",[$requestId,date('Y-m-d H:i:s')]);perform_delete('requisitions',$requestId);verify_delete(!one('SELECT id FROM requisitions WHERE id=?',[$requestId])&&!one('SELECT id FROM notifications WHERE requisition_id=?',[$requestId]),'Owner deletes eligible requisition and linked messages');
-$_POST=['id'=>'0','requested_role'=>'Utility','destination'=>'Office','purpose'=>'Work','start_datetime'=>'2030-01-01T08:00','end_datetime'=>'2030-01-01T12:00','submit_mode'=>'draft'];lock_transaction();$personnelId=personnel_save();finish_transaction(true);run("INSERT INTO personnel_booking_history(booking_id,user_id,decision,created_at) VALUES(?,1,'Returned for Correction',?)",[$personnelId,date('Y-m-d H:i:s')]);run('INSERT INTO personnel_booking_assignments(booking_id,personnel_id) VALUES(?,1)',[$personnelId]);perform_delete('personnel_bookings',$personnelId);verify_delete(!one('SELECT id FROM personnel_bookings WHERE id=?',[$personnelId])&&!one('SELECT booking_id FROM personnel_booking_assignments WHERE booking_id=?',[$personnelId]),'Personnel requisition deletion cleans linked assignments and history');
-run("INSERT INTO notifications(user_id,message,created_at) VALUES(1,'Private note',?)",[date('Y-m-d H:i:s')]);$noteId=(int)$pdo->lastInsertId();refuse_delete('notifications',$noteId,'Cannot delete another user notification');$user=$admin;perform_delete('notifications',$noteId);verify_delete(!one('SELECT id FROM notifications WHERE id=?',[$noteId]),'Owner deletes notification');
-run("INSERT INTO vehicle_blocks(vehicle_id,start_datetime,end_datetime,reason,created_by) VALUES(1,'2030-02-01','2030-02-02','Unused block',1)");$blockId=(int)$pdo->lastInsertId();perform_delete('vehicle_blocks',$blockId);verify_delete(!one('SELECT id FROM vehicle_blocks WHERE id=?',[$blockId]),'Maintenance block removed');
-verify_delete(count(all("SELECT id FROM audit_logs WHERE action='Record deleted'"))>=8,'Successful deletions retained in audit trail');
+$pdo = new PDO('sqlite::memory:', null, null, [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+]);
+$pdo->exec('PRAGMA foreign_keys=ON');
+initialize_database($pdo);
+personnel_schema($pdo);
+auth_schema($pdo);
+$admin = one('SELECT * FROM users WHERE id=1');
+$requester = one('SELECT * FROM users WHERE id=3');
+$user = $admin;
+function verify_delete(bool $ok, string $label): void
+{
+    if (!$ok) {
+        throw new RuntimeException('FAIL: ' . $label);
+    }
+    echo 'PASS: ' . $label . "\n";
+}
+function perform_delete(string $entity, int $id): void
+{
+    lock_transaction();
+    try {
+        delete_record($entity, $id);
+        finish_transaction(true);
+    } catch (Throwable $e) {
+        finish_transaction(false);
+        throw $e;
+    }
+}
+function refuse_delete(string $entity, int $id, string $label): void
+{
+    try {
+        perform_delete($entity, $id);
+    } catch (RuntimeException $e) {
+        verify_delete(true, $label);
+        return;
+    }
+    throw new RuntimeException('FAIL: ' . $label);
+}
+refuse_delete('users', 1, 'Self deletion blocked');
+refuse_delete('users', 3, 'User with operational history protected');
+refuse_delete('offices', 1, 'Linked office protected');
+refuse_delete('vehicles', 1, 'Vehicle with trip history protected');
+refuse_delete('personnel', 1, 'Driver with trip history protected');
+refuse_delete('audit_logs', 1, 'Audit log deletion not exposed');
+run(
+    "INSERT INTO vehicles(model,type,plate,capacity,status) VALUES('Unused','Van','DELETE-TEST',8,'Available')",
+);
+$vehicleId = (int) $pdo->lastInsertId();
+$user = $requester;
+refuse_delete('vehicles', $vehicleId, 'Requester cannot delete fleet records');
+$user = $admin;
+perform_delete('vehicles', $vehicleId);
+verify_delete(!one('SELECT id FROM vehicles WHERE id=?', [$vehicleId]), 'Unused vehicle deleted');
+run("INSERT INTO offices(code,name) VALUES('DEL','Unused office')");
+$officeId = (int) $pdo->lastInsertId();
+perform_delete('offices', $officeId);
+verify_delete(!one('SELECT id FROM offices WHERE id=?', [$officeId]), 'Unused office deleted');
+run(
+    "INSERT INTO users(full_name,email,password_hash,role,office_id,status) VALUES('Unused user','delete@example.test','hash','Requester',1,'Pending')",
+);
+$accountId = (int) $pdo->lastInsertId();
+run('INSERT INTO auth_preferences(user_id) VALUES(?)', [$accountId]);
+run("INSERT INTO auth_factors(user_id,secret_cipher,recovery_hashes) VALUES(?,'secret','[]')", [
+    $accountId,
+]);
+run("INSERT INTO notifications(user_id,message,created_at) VALUES(?,'Note',?)", [
+    $accountId,
+    date('Y-m-d H:i:s'),
+]);
+perform_delete('users', $accountId);
+verify_delete(
+    !one('SELECT user_id FROM auth_factors WHERE user_id=?', [$accountId]) &&
+        !one('SELECT user_id FROM auth_preferences WHERE user_id=?', [$accountId]) &&
+        !one('SELECT id FROM users WHERE id=?', [$accountId]),
+    'Unused account and authentication records deleted',
+);
+run(
+    "INSERT INTO drivers(full_name,employee_number,office_id,license_expiry,status) VALUES('Unused driver','DEL-DRIVER',1,'2030-01-01','Available')",
+);
+$driverId = (int) $pdo->lastInsertId();
+personnel_schema($pdo);
+$person = one('SELECT * FROM personnel WHERE driver_id=?', [$driverId]);
+perform_delete('personnel', (int) $person['id']);
+personnel_schema($pdo);
+verify_delete(
+    !one('SELECT id FROM drivers WHERE id=?', [$driverId]) &&
+        !one('SELECT id FROM personnel WHERE driver_id=?', [$driverId]),
+    'Personnel and legacy driver deleted without reimport',
+);
+run(
+    "INSERT INTO requisitions(reference,requester_id,office_id,vehicle_type,passengers,start_datetime,end_datetime,destination,purpose,status,created_at) VALUES('DELETE-REQUEST',3,1,'Van','Staff','2030-01-01 08:00:00','2030-01-01 12:00:00','Office','Work','Draft',?)",
+    [date('Y-m-d H:i:s')],
+);
+$requestId = (int) $pdo->lastInsertId();
+$user = one('SELECT * FROM users WHERE id=2');
+refuse_delete('requisitions', $requestId, 'Supervisor cannot delete another requester record');
+$user = $requester;
+foreach (['Pending Administrative Approval', 'Approved', 'Dispatched', 'Completed'] as $status) {
+    run('UPDATE requisitions SET status=? WHERE id=?', [$status, $requestId]);
+    refuse_delete('requisitions', $requestId, 'Protect requisition status ' . $status);
+}
+run("UPDATE requisitions SET status='Rejected' WHERE id=?", [$requestId]);
+run(
+    "INSERT INTO approvals(requisition_id,user_id,stage,decision,created_at) VALUES(?,1,'Administrative','Rejected',?)",
+    [$requestId, date('Y-m-d H:i:s')],
+);
+run("INSERT INTO notifications(user_id,message,requisition_id,created_at) VALUES(3,'Note',?,?)", [
+    $requestId,
+    date('Y-m-d H:i:s'),
+]);
+perform_delete('requisitions', $requestId);
+verify_delete(
+    !one('SELECT id FROM requisitions WHERE id=?', [$requestId]) &&
+        !one('SELECT id FROM notifications WHERE requisition_id=?', [$requestId]),
+    'Owner deletes eligible requisition and linked messages',
+);
+$_POST = [
+    'id' => '0',
+    'requested_role' => 'Utility',
+    'destination' => 'Office',
+    'purpose' => 'Work',
+    'start_datetime' => '2030-01-01T08:00',
+    'end_datetime' => '2030-01-01T12:00',
+    'submit_mode' => 'draft',
+];
+lock_transaction();
+$personnelId = personnel_save();
+finish_transaction(true);
+run(
+    "INSERT INTO personnel_booking_history(booking_id,user_id,decision,created_at) VALUES(?,1,'Returned for Correction',?)",
+    [$personnelId, date('Y-m-d H:i:s')],
+);
+run('INSERT INTO personnel_booking_assignments(booking_id,personnel_id) VALUES(?,1)', [
+    $personnelId,
+]);
+perform_delete('personnel_bookings', $personnelId);
+verify_delete(
+    !one('SELECT id FROM personnel_bookings WHERE id=?', [$personnelId]) &&
+        !one('SELECT booking_id FROM personnel_booking_assignments WHERE booking_id=?', [
+            $personnelId,
+        ]),
+    'Personnel requisition deletion cleans linked assignments and history',
+);
+run("INSERT INTO notifications(user_id,message,created_at) VALUES(1,'Private note',?)", [
+    date('Y-m-d H:i:s'),
+]);
+$noteId = (int) $pdo->lastInsertId();
+refuse_delete('notifications', $noteId, 'Cannot delete another user notification');
+$user = $admin;
+perform_delete('notifications', $noteId);
+verify_delete(
+    !one('SELECT id FROM notifications WHERE id=?', [$noteId]),
+    'Owner deletes notification',
+);
+run(
+    "INSERT INTO vehicle_blocks(vehicle_id,start_datetime,end_datetime,reason,created_by) VALUES(1,'2030-02-01','2030-02-02','Unused block',1)",
+);
+$blockId = (int) $pdo->lastInsertId();
+perform_delete('vehicle_blocks', $blockId);
+verify_delete(
+    !one('SELECT id FROM vehicle_blocks WHERE id=?', [$blockId]),
+    'Maintenance block removed',
+);
+verify_delete(
+    count(all("SELECT id FROM audit_logs WHERE action='Record deleted'")) >= 8,
+    'Successful deletions retained in audit trail',
+);
 echo "All deletion checks passed.\n";

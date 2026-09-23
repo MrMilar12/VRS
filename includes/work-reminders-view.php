@@ -1,14 +1,170 @@
 <?php
-require_once __DIR__.'/work-reminders.php';
-$work=work_reminders($rows,$personnelRows,$now,(int)$user['id']);
-$groups=['unfinished'=>['Unfinished work','Open requests carried over from previous days.'],'today'=>['Today’s work','Requests scheduled today and assignments already in progress.'],'upcoming'=>['Upcoming tasks','Future vehicle and personnel requests, nearest dates first.']];
-$grouped=[];foreach($groups as $key=>$group)$grouped[$key]=array_values(array_filter($work,fn($r)=>$r['work_group']===$key));
-$carried=count(array_filter($work,fn($r)=>$r['carryover']));
-$accountCount=is_role('Administrator')?(int)one("SELECT COUNT(*) n FROM users WHERE status='Pending'")['n']:0;
+require_once __DIR__ . '/work-reminders.php';
+$work = work_reminders($rows, $personnelRows, $now, (int) $user['id']);
+$groups = [
+    'unfinished' => ['Unfinished work', 'Open requests carried over from previous days.'],
+    'today' => ['Today’s work', 'Requests scheduled today and assignments already in progress.'],
+    'upcoming' => ['Upcoming tasks', 'Future vehicle and personnel requests, nearest dates first.'],
+];
+$grouped = [];
+foreach ($groups as $key => $group) {
+    $grouped[$key] = array_values(array_filter($work, fn($r) => $r['work_group'] === $key));
+}
+$carried = count(array_filter($work, fn($r) => $r['carryover']));
+$accountCount = is_role('Administrator')
+    ? (int) one("SELECT COUNT(*) n FROM users WHERE status='Pending'")['n']
+    : 0;
 ?>
-<section class="panel work-reminders" aria-labelledby="work-reminders-title"><div class="panel-heading"><div><h2 id="work-reminders-title">Your work &amp; upcoming tasks <span class="count-pill"><?=count($work)+$accountCount?></span></h2><p>Today’s tasks, future schedules, and unfinished requests in one place.</p></div><span class="work-day"><?=icon('calendar',16)?> <?=date('M j, Y')?></span></div>
-<div class="work-summary"><span><strong><?=count($work)?></strong> open requisitions</span><span class="<?=$carried?'work-warning':''?>"><strong><?=$carried?></strong> carried over</span><span><strong><?=count($grouped['today'])?></strong> today / in progress</span><span><strong><?=count($grouped['upcoming'])?></strong> upcoming</span><span><?=e($config['timezone'])?></span></div>
-<?php if($accountCount):?><a class="work-account" href="index.php?page=account-requests"><?=icon('shield',19)?><span><strong><?=$accountCount?> account request<?=$accountCount===1?'':'s'?> awaiting approval</strong><small>Review who can access the workspace.</small></span><?=icon('chevron',18)?></a><?php endif?>
-<div class="work-list"><?php foreach($groups as $key=>[$groupTitle,$groupDescription]):?><section class="work-group" aria-labelledby="work-group-<?=$key?>"><div class="work-group-heading"><h3 id="work-group-<?=$key?>"><?=e($groupTitle)?> <span class="count-pill"><?=count($grouped[$key])?></span></h3><p><?=e($groupDescription)?></p></div><?php foreach($grouped[$key] as $item):$personnel=$item['request_kind']==='Personnel';$detail=secure_record_url('index.php?page='.($personnel?'personnel-request':'request').'&id='.$item['id']);?>
-<article class="work-item <?=$item['overdue']?'is-overdue':''?>"><span class="work-icon" aria-hidden="true"><?=icon($personnel?'users':'car',21)?></span><div class="work-copy"><div class="work-meta"><span><?=e($item['request_kind'])?></span><?php if($item['carryover']):?><span class="work-warning">Carried over · <?=shortdate($item['start_datetime'],'M j')?></span><?php endif?><?php if($item['overdue']):?><span class="work-warning">Past scheduled end</span><?php endif?></div><h3><a href="<?=e($detail)?>"><?=e($item['reference'])?> · <?=e($item['reminder_task'])?></a></h3><p><?=nl2br(e($item['destination']))?></p><div class="work-meta"><span><?=e($item['requester_name'])?> · <?=e($item['office_code'])?></span><span><?=e($personnel?($item['personnel_name']??'Personnel not assigned'):($item['model']??'Vehicle not assigned'))?></span></div><div class="work-schedule"><span>Start <strong><?=shortdate($item['start_datetime'],'M j, Y · g:i A')?></strong></span><span>End <strong><?=shortdate($item['end_datetime'],'M j, Y · g:i A')?></strong></span></div><?php if($item['status']==='Approved'&&$item['overdue']):?><p class="work-warning">The schedule has ended. Review this request to resolve or reschedule it.</p><?php endif?></div><div class="work-actions"><?=badge($item['status'])?><a class="btn small primary" href="<?=e($detail)?>" aria-label="Open <?=e($item['reference'])?>">Open request <?=icon('chevron',14)?></a></div></article>
-<?php endforeach;if(!$grouped[$key]):?><p class="work-group-empty"><?=e(['unfinished'=>'No unfinished requests from previous days.','today'=>'No open tasks for today.','upcoming'=>'No future tasks scheduled.'][$key])?></p><?php endif?></section><?php endforeach?></div></section>
+<section class="panel work-reminders" aria-labelledby="work-reminders-title">
+    <div class="panel-heading">
+        <div>
+            <h2 id="work-reminders-title">
+                Your work &amp; upcoming tasks <span class="count-pill"><?= count(
+                    $work,
+                ) +
+                    $accountCount ?></span>
+            </h2>
+            <p>Today’s tasks, future schedules, and unfinished requests in one place.</p>
+        </div>
+        <span class="work-day"><?= icon(
+            'calendar',
+            16,
+        ) ?> <?= date('M j, Y') ?></span>
+    </div>
+    <div class="work-summary">
+        <span><strong><?= count(
+            $work,
+        ) ?></strong> open requisitions</span
+        ><span class="<?= $carried
+            ? 'work-warning'
+            : '' ?>"><strong><?= $carried ?></strong> carried over</span
+        ><span><strong><?= count(
+            $grouped['today'],
+        ) ?></strong> today / in progress</span
+        ><span><strong><?= count(
+            $grouped['upcoming'],
+        ) ?></strong> upcoming</span><span><?= e($config['timezone']) ?></span>
+    </div>
+    <?php if ($accountCount): ?><a class="work-account" href="index.php?page=account-requests"
+        ><?= icon(
+            'shield',
+            19,
+        ) ?><span
+            ><strong><?= $accountCount ?> account request<?= $accountCount === 1
+                 ? ''
+                 : 's' ?> awaiting approval</strong
+            ><small>Review who can access the workspace.</small></span
+        ><?= icon(
+             'chevron',
+             18,
+         ) ?></a
+    ><?php endif; ?>
+    <div class="work-list">
+        <?php foreach (
+            $groups
+            as $key => [$groupTitle, $groupDescription]
+        ): ?>
+        <section class="work-group" aria-labelledby="work-group-<?= $key ?>">
+            <div class="work-group-heading">
+                <h3 id="work-group-<?= $key ?>">
+                    <?= e(
+                        $groupTitle,
+                    ) ?> <span class="count-pill"><?= count($grouped[$key]) ?></span>
+                </h3>
+                <p><?= e(
+                    $groupDescription,
+                ) ?></p>
+            </div>
+            <?php
+            foreach ($grouped[$key] as $item):
+
+                $personnel = $item['request_kind'] === 'Personnel';
+                $detail = secure_record_url(
+                    'index.php?page=' . ($personnel ? 'personnel-request' : 'request') . '&id=' . $item['id'],
+                );
+                ?>
+            <article class="work-item <?= $item['overdue']
+                ? 'is-overdue'
+                : '' ?>">
+                <span class="work-icon" aria-hidden="true"><?= icon(
+                    $personnel ? 'users' : 'car',
+                    21,
+                ) ?></span>
+                <div class="work-copy">
+                    <div class="work-meta">
+                        <span><?= e(
+                            $item['request_kind'],
+                        ) ?></span><?php if ($item['carryover']): ?><span class="work-warning"
+                            >Carried over · <?= shortdate(
+                                $item['start_datetime'],
+                                'M j',
+                            ) ?></span
+                        ><?php endif; ?><?php if (
+                            $item['overdue']
+                        ): ?><span class="work-warning">Past scheduled end</span
+                        ><?php endif; ?>
+                    </div>
+                    <h3><a href="<?= e(
+                        $detail,
+                    ) ?>"><?= e($item['reference']) ?> · <?= e($item['reminder_task']) ?></a></h3>
+                    <p><?= nl2br(
+                        e($item['destination']),
+                    ) ?></p>
+                    <div class="work-meta">
+                        <span><?= e($item['requester_name']) ?> · <?= e(
+                             $item['office_code'],
+                         ) ?></span
+                        ><span><?= e(
+                            $personnel
+                                ? $item['personnel_name'] ?? 'Personnel not assigned'
+                                : $item['model'] ?? 'Vehicle not assigned',
+                        ) ?></span>
+                    </div>
+                    <div class="work-schedule">
+                        <span>Start <strong><?= shortdate(
+                            $item['start_datetime'],
+                            'M j, Y · g:i A',
+                        ) ?></strong></span
+                        ><span>End <strong><?= shortdate(
+                            $item['end_datetime'],
+                            'M j, Y · g:i A',
+                        ) ?></strong></span>
+                    </div>
+                    <?php if (
+                        $item['status'] === 'Approved' &&
+                        $item['overdue']
+                    ): ?>
+                    <p class="work-warning">
+                        The schedule has ended. Review this request to resolve or reschedule it.
+                    </p>
+                    <?php endif; ?>
+                </div>
+                <div class="work-actions">
+                    <?= badge(
+                        $item['status'],
+                    ) ?><a
+                        class="btn small primary"
+                        href="<?= e($detail) ?>"
+                        aria-label="Open <?= e(
+                            $item['reference'],
+                        ) ?>"
+                        >Open request <?= icon('chevron', 14) ?></a
+                    >
+                </div>
+            </article>
+            <?php
+            endforeach;
+            if (!$grouped[$key]): ?>
+            <p class="work-group-empty"><?= e(
+                [
+                    'unfinished' => 'No unfinished requests from previous days.',
+                    'today' => 'No open tasks for today.',
+                    'upcoming' => 'No future tasks scheduled.',
+                ][$key],
+            ) ?></p>
+            <?php endif;
+            ?>
+        </section>
+        <?php endforeach; ?>
+    </div>
+</section>

@@ -1,17 +1,408 @@
 <?php
-function layout_start(string $page,string $title): void {global $user,$config;
-$pending=is_role('Administrator')?count(approval_requests()):0;
-$accountRequests=is_role('Administrator')?(int)one("SELECT COUNT(*) n FROM users WHERE status='Pending'")['n']:0;
-$unread=(int)one('SELECT COUNT(*) n FROM notifications WHERE user_id=? AND is_read=0',[$user['id']])['n'];
-?><!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#174c40"><title><?=e($title)?> · VPRS</title><script src="assets/js/theme.js?v=<?=filemtime(__DIR__.'/../assets/js/theme.js')?>"></script><link rel="stylesheet" href="assets/css/style.css?v=<?=filemtime(__DIR__.'/../assets/css/style.css')?>"><?php if($page==='assistant'):?><link rel="stylesheet" href="assets/css/booking-assistant.css?v=<?=filemtime(__DIR__.'/../assets/css/booking-assistant.css')?>"><?php endif?><link rel="stylesheet" href="assets/css/theme.css?v=<?=filemtime(__DIR__.'/../assets/css/theme.css')?>"><script src="assets/js/data-views.js?v=<?=filemtime(__DIR__.'/../assets/js/data-views.js')?>" defer></script><script src="assets/js/app.js?v=<?=filemtime(__DIR__.'/../assets/js/app.js')?>" defer></script></head><body><div class="app-shell"><aside class="sidebar" id="sidebar"><a class="brand" href="index.php"><span class="brand-icon requisition-brand-mark" aria-hidden="true"><?=icon('car',24)?><span><?=icon('users',12)?></span></span><span>VPRS<span class="brand-sub">VEHICLE &amp; PERSONNEL</span></span></a><div class="workspace"><span class="workspace-symbol"><?=icon('office',19)?></span><div>Government workspace<small><?=e(setting('organization'))?></small></div></div><nav aria-label="Main navigation"><div class="nav-label">WORKSPACE</div><?php
-$nav=[['dashboard','grid','Overview'],['profile','users','My profile'],['assistant','car','Booking & help assistant'],['calendar','calendar','Vehicle calendar'],['requisitions','file','Requisitions'],['personnel-bookings','users','Personnel requisitions'],['approvals','shield','Approvals'],['dispatch','arrow','Dispatch & returns']];
-foreach($nav as [$p,$ico,$label]){if($p==='approvals'&&!is_role('Administrator'))continue;if($p==='dispatch'&&!is_role('Dispatcher','Administrator','Administrative Officer'))continue;?><a class="nav-item <?=($page===$p||($page==='request'&&$p==='requisitions'))?'active':''?>" href="index.php?page=<?=$p?>"><?=icon($ico,19)?><span><?=$label?></span><?php if($p==='approvals'&&$pending):?><b class="nav-count"><?=$pending?></b><?php endif?></a><?php }?>
-<?php if(manage()):?><div class="nav-label">FLEET MANAGEMENT</div><?php foreach([['vehicles','car','Vehicles'],['personnel','users','Personnel'],['maintenance','wrench','Maintenance'],['reports','chart','Reports & insights']] as [$p,$ico,$label]):?><a class="nav-item <?=$page===$p?'active':''?>" href="index.php?page=<?=$p?>"><?=icon($ico,19)?><span><?=$label?></span></a><?php endforeach;endif?>
-<?php if(is_role('Administrator')):?><div class="nav-label">ADMINISTRATION</div><?php foreach([['offices','office','Offices'],['users','users','Users & roles'],['account-requests','shield','Account requests'],['audit','clock','Audit trail'],['settings','settings','Settings'],['developer','settings','Developer center']] as [$p,$ico,$label]):?><a class="nav-item <?=$page===$p?'active':''?>" href="index.php?page=<?=$p?>"><?=icon($ico,19)?><span><?=$label?></span><?php if($p==='account-requests'&&$accountRequests):?><b class="nav-count"><?=$accountRequests?></b><?php endif?></a><?php endforeach;endif?></nav><div class="sidebar-bottom"><span class="online-dot"></span> <?= $config['demo']?'Demo workspace':'Workspace connected'?><small>Vehicle &amp; Personnel Requisition System</small></div></aside><div class="main-shell"><header class="topbar"><div class="breadcrumb"><button class="icon-button mobile-menu" aria-label="Toggle navigation" data-toggle-sidebar><?=icon('grid')?></button><span>Workspace</span><span class="slash">/</span><strong><?=e($title)?></strong></div><div class="assistant-island" data-assistant-island><form class="header-tracking-search" action="index.php" method="get" role="search" aria-label="Track vehicle and personnel requisitions"><input type="hidden" name="page" value="requisitions"><input type="search" name="q" aria-label="Slip reference or personnel name" placeholder="Track a slip or ask a question…" value="<?=e($page==='requisitions'&&is_string($_GET['q']??null)?trim($_GET['q']):'')?>" maxlength="160" required><button type="submit" aria-label="Search slip" title="Search slip"><?=icon('search',18)?></button></form></div><div class="top-actions"><div class="theme-switch" data-theme-switch role="group" aria-label="Appearance" hidden><button type="button" data-theme-mode="light" aria-pressed="false" aria-label="Use light mode" title="Light mode"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><span>Light</span></button><button type="button" data-theme-mode="dark" aria-pressed="false" aria-label="Use dark mode" title="Dark mode"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z"/></svg><span>Dark</span></button></div><span class="today-label"><?=icon('calendar',16)?> <?=date('D, M j, Y')?></span><a class="notification icon-button" href="index.php?page=notifications" aria-label="Notifications"><?=icon('bell')?><?php if($unread):?><i></i><?php endif?></a><span class="top-divider"></span><a class="profile" href="index.php?page=profile" aria-label="View my profile"><span class="avatar"><?=e(implode('',array_map(fn($s)=>substr($s,0,1),array_slice(explode(' ',$user['full_name']),0,2))))?></span><div><strong><?=e($user['full_name'])?></strong><small><?=e($user['role'])?></small></div></a><form action="actions.php" method="post"><?=csrf()?><input type="hidden" name="action" value="logout"><button class="icon-button" aria-label="Sign out" title="Sign out"><?=icon('logout',17)?></button></form></div></header><main class="content">
-<?php if(isset($_SESSION['flash'])):[$message,$type]=$_SESSION['flash'];unset($_SESSION['flash']);?><div class="alert <?=e($type)?>" role="status"><?=icon($type==='error'?'shield':'check',18)?> <?=e($message)?></div><?php endif?>
-<?php }
-function layout_end(): void {global $config;?><footer class="page-footer"><span>VPRS <span class="footer-dot">·</span> People and journeys, coordinated.</span></footer></main></div></div><dialog id="event-dialog"><div class="dialog-head"><h2>Scheduled journey</h2><button class="icon-button" data-close-dialog aria-label="Close">×</button></div><div id="event-detail"></div></dialog><?php require __DIR__.'/admin-confirm-dialog.php';require __DIR__.'/tracking-popup.php';?></body></html><?php }
-function page_heading(string $title,string $description,string $action=''): void {?><div class="page-heading"><div><h1><?=e($title)?></h1><p><?=e($description)?></p></div><div class="heading-actions"><?=$action?></div></div><?php }
-function new_button(): string {return '<a class="btn primary" href="index.php?page=create">'.icon('plus',17).' New requisition</a>';}
-function request_table(array $rows,bool $compact=false,bool $approvals=false): void {?>
-<div class="table-scroll"><table class="data-table"><thead><tr><th>REQUISITION / DESTINATION</th><th>REQUESTING OFFICE</th><th>SCHEDULE</th><th><?=$approvals?'REQUEST TYPE / REQUIREMENT':'VEHICLE'?></th><th>STATUS</th><th></th></tr></thead><tbody><?php foreach($rows as $r):$personnel=($r['request_kind']??'')==='Personnel';$detail=secure_record_url('index.php?page='.($personnel?'personnel-request':'request').'&id='.$r['id']);?><tr><td><a class="table-title" href="<?=e($detail)?>"><?=e($r['reference'])?></a><small><?=nl2br(e($r['destination']))?></small></td><td><span class="office-chip"><?=e($r['office_code'])?></span><span class="cell-office"><?=e($r['office_name'])?></span><small><?=e($r['requester_name'])?></small></td><td><small>Start</small><strong><?=shortdate($r['start_datetime'],'M j, Y · g:i A')?></strong><small>End</small><strong><?=shortdate($r['end_datetime'],'M j, Y · g:i A')?></strong></td><td><?php if($approvals):?><?=e($r['request_kind'])?><small><?=e($personnel?$r['requested_role']:$r['vehicle_type'])?></small><?php else:?><?=e($r['model']??'Awaiting assignment')?><small><?=e($r['plate']??'—')?></small><?php endif?></td><td><?=badge($r['status'])?></td><td><a class="icon-button" href="<?=e($detail)?>" aria-label="View <?=e($r['reference'])?>"><?=icon('chevron',16)?></a> <?=delete_link($personnel?'personnel_bookings':'requisitions',$r)?></td></tr><?php endforeach;if(!$rows):?><tr><td colspan="6"><div class="empty-state"><?=icon('file',30)?><h3>No requisitions found</h3><p>Try another filter or create a new request.</p></div></td></tr><?php endif?></tbody></table></div><?php }
+function layout_start(string $page, string $title): void
+{
+    global $user, $config;
+    $pending = is_role('Administrator') ? count(approval_requests()) : 0;
+    $accountRequests = is_role('Administrator')
+        ? (int) one("SELECT COUNT(*) n FROM users WHERE status='Pending'")['n']
+        : 0;
+    $unread = (int) one('SELECT COUNT(*) n FROM notifications WHERE user_id=? AND is_read=0', [
+        $user['id'],
+    ])['n'];
+    ?><!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#174c40" />
+        <title><?= e($title) ?> · VPRS</title>
+        <script src="assets/js/theme.js?v=<?= filemtime(__DIR__ . '/../assets/js/theme.js') ?>"></script>
+        <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__ . '/../assets/css/style.css') ?>" />
+        <?php if ($page === 'assistant'): ?>
+        <link rel="stylesheet" href="assets/css/booking-assistant.css?v=<?= filemtime(__DIR__ . '/../assets/css/booking-assistant.css') ?>" />
+        <?php endif; ?>
+        <link rel="stylesheet" href="assets/css/theme.css?v=<?= filemtime(__DIR__ . '/../assets/css/theme.css') ?>" />
+        <script src="assets/js/data-views.js?v=<?= filemtime(__DIR__ . '/../assets/js/data-views.js') ?>" defer></script>
+        <script src="assets/js/app.js?v=<?= filemtime(__DIR__ . '/../assets/js/app.js') ?>" defer></script>
+    </head>
+    <body>
+        <div class="app-shell">
+            <aside class="sidebar" id="sidebar">
+                <a class="brand" href="index.php"
+                    ><span class="brand-icon requisition-brand-mark" aria-hidden="true"
+                        ><?= icon('car', 24) ?><span><?= icon('users', 12) ?></span></span
+                    ><span>VPRS<span class="brand-sub">VEHICLE &amp; PERSONNEL</span></span></a
+                >
+                <div class="workspace">
+                    <span class="workspace-symbol"><?= icon('office', 19) ?></span>
+                    <div>Government workspace<small><?= e(setting('organization')) ?></small></div>
+                </div>
+                <nav aria-label="Main navigation">
+                    <div class="nav-label">WORKSPACE</div>
+                    <?php
+                    $nav = [
+                        ['dashboard', 'grid', 'Overview'],
+                        ['profile', 'users', 'My profile'],
+                        ['assistant', 'car', 'Booking & help assistant'],
+                        ['calendar', 'calendar', 'Vehicle calendar'],
+                        ['requisitions', 'file', 'Requisitions'],
+                        ['personnel-bookings', 'users', 'Personnel requisitions'],
+                        ['approvals', 'shield', 'Approvals'],
+                        ['dispatch', 'arrow', 'Dispatch & returns'],
+                    ];
+                    foreach ($nav as [$p, $ico, $label]) {
+
+                        if ($p === 'approvals' && !is_role('Administrator')) {
+                            continue;
+                        }
+                        if ($p === 'dispatch' && !is_role('Dispatcher', 'Administrator', 'Administrative Officer')) {
+                            continue;
+                        }
+                        ?><a
+                        class="nav-item <?= $page === $p || ($page === 'request' && $p === 'requisitions')
+                            ? 'active'
+                            : '' ?>"
+                        href="index.php?page=<?= $p ?>"
+                        ><?= icon(
+                            $ico,
+                            19,
+                        ) ?><span><?= $label ?></span><?php if (
+                            $p === 'approvals' &&
+                            $pending
+                        ): ?><b
+                            class="nav-count"
+                            ><?= $pending ?></b
+                        ><?php endif; ?></a
+                    ><?php
+                    }
+                    ?>
+                    <?php if (manage()): ?>
+                    <div class="nav-label">FLEET MANAGEMENT</div>
+                    <?php foreach (
+                        [
+                            ['vehicles', 'car', 'Vehicles'],
+                            ['personnel', 'users', 'Personnel'],
+                            ['maintenance', 'wrench', 'Maintenance'],
+                            ['reports', 'chart', 'Reports & insights'],
+                        ]
+                        as [$p, $ico, $label]
+                    ): ?><a
+                        class="nav-item <?= $page === $p
+                            ? 'active'
+                            : '' ?>"
+                        href="index.php?page=<?= $p ?>"
+                        ><?= icon(
+                            $ico,
+                            19,
+                        ) ?><span><?= $label ?></span></a
+                    ><?php endforeach;endif; ?>
+                    <?php if (is_role('Administrator')): ?>
+                    <div class="nav-label">ADMINISTRATION</div>
+                    <?php foreach (
+                        [
+                            ['offices', 'office', 'Offices'],
+                            ['users', 'users', 'Users & roles'],
+                            ['account-requests', 'shield', 'Account requests'],
+                            ['audit', 'clock', 'Audit trail'],
+                            ['settings', 'settings', 'Settings'],
+                            ['developer', 'settings', 'Developer center'],
+                        ]
+                        as [$p, $ico, $label]
+                    ): ?><a
+                        class="nav-item <?= $page === $p
+                            ? 'active'
+                            : '' ?>"
+                        href="index.php?page=<?= $p ?>"
+                        ><?= icon(
+                            $ico,
+                            19,
+                        ) ?><span><?= $label ?></span><?php if (
+                            $p === 'account-requests' &&
+                            $accountRequests
+                        ): ?><b
+                            class="nav-count"
+                            ><?= $accountRequests ?></b
+                        ><?php endif; ?></a
+                    ><?php endforeach;endif; ?>
+                </nav>
+                <div class="sidebar-bottom">
+                    <span class="online-dot"></span> <?= $config['demo'] ? 'Demo workspace' : 'Workspace connected' ?><small
+                        >Vehicle &amp; Personnel Requisition System</small
+                    >
+                </div>
+            </aside>
+            <div class="main-shell">
+                <header class="topbar">
+                    <div class="breadcrumb">
+                        <button
+                            class="icon-button mobile-menu"
+                            aria-label="Toggle navigation"
+                            data-toggle-sidebar
+                        >
+                            <?= icon('grid') ?></button
+                        ><span>Workspace</span><span class="slash">/</span
+                        ><strong><?= e($title) ?></strong>
+                    </div>
+                    <div class="topbar-tools">
+                    <div class="assistant-island" data-assistant-island>
+                        <form
+                            class="header-tracking-search"
+                            action="index.php"
+                            method="get"
+                            role="search"
+                            aria-label="Track vehicle and personnel requisitions"
+                        >
+                            <input type="hidden" name="page" value="requisitions" /><input
+                                type="search"
+                                name="q"
+                                aria-label="Slip reference or personnel name"
+                                placeholder="Track a slip or ask a question…"
+                                value="<?= e($page === 'requisitions' && is_string($_GET['q'] ?? null) ? trim($_GET['q']) : '') ?>"
+                                maxlength="160"
+                                required
+                            /><button type="submit" aria-label="Search slip" title="Search slip">
+                                <?= icon('search', 18) ?>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="top-actions">
+                        <div
+                            class="theme-switch"
+                            data-theme-switch
+                            role="group"
+                            aria-label="Appearance"
+                            hidden
+                        >
+                            <button
+                                type="button"
+                                data-theme-mode="light"
+                                aria-pressed="false"
+                                aria-label="Use light mode"
+                                title="Light mode"
+                            >
+                                <svg
+                                    width="17"
+                                    height="17"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.7"
+                                    aria-hidden="true"
+                                >
+                                    <circle cx="12" cy="12" r="4" />
+                                    <path
+                                        d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"
+                                    /></svg
+                                ><span>Light</span></button
+                            ><button
+                                type="button"
+                                data-theme-mode="dark"
+                                aria-pressed="false"
+                                aria-label="Use dark mode"
+                                title="Dark mode"
+                            >
+                                <svg
+                                    width="17"
+                                    height="17"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.7"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z"
+                                    /></svg
+                                ><span>Dark</span>
+                            </button>
+                        </div>
+                        <span class="today-label"><?= icon('calendar', 16) ?> <?= date('D, M j, Y') ?></span
+                        ><a
+                            class="notification icon-button"
+                            href="index.php?page=notifications"
+                            aria-label="Notifications"
+                            ><?= icon('bell') ?><?php if ($unread): ?><i></i><?php endif; ?></a
+                        ><span class="top-divider"></span
+                        ><a
+                            class="profile"
+                            href="index.php?page=profile"
+                            aria-label="View my profile"
+                            ><span class="avatar"><?= e(implode('', array_map(fn($s) => substr($s, 0, 1), array_slice(explode(' ', $user['full_name']), 0, 2)))) ?></span>
+                            <div>
+                                <strong><?= e($user['full_name']) ?></strong><small><?= e($user['role']) ?></small>
+                            </div></a
+                        >
+                        <form action="actions.php" method="post">
+                            <?= csrf() ?><input
+                                type="hidden"
+                                name="action"
+                                value="logout"
+                            /><button class="icon-button" aria-label="Sign out" title="Sign out">
+                                <?= icon('logout', 17) ?>
+                            </button>
+                        </form>
+                    </div>
+                    </div>
+                </header>
+                <main class="content">
+                    <?php if (isset($_SESSION['flash'])):
+
+                        [$message, $type] = $_SESSION['flash'];
+                        unset($_SESSION['flash']);
+                        ?>
+                    <div class="alert <?= e($type) ?>" role="status">
+                        <?= icon(
+                            $type === 'error' ? 'shield' : 'check',
+                            18,
+                        ) ?> <?= e($message) ?>
+                    </div>
+                    <?php
+                    endif; ?>
+                    <?php
+                    }
+                    function layout_end(): void
+                    {
+                        global $config; ?>
+                    <footer class="page-footer">
+                        <span
+                            >VPRS <span class="footer-dot">·</span> People and journeys,
+                            coordinated.</span
+                        >
+                    </footer>
+                </main>
+            </div>
+        </div>
+        <dialog id="event-dialog">
+            <div class="dialog-head">
+                <h2>Scheduled journey</h2>
+                <button class="icon-button" data-close-dialog aria-label="Close">×</button>
+            </div>
+            <div id="event-detail"></div>
+        </dialog>
+        <?php
+        require __DIR__ . '/admin-confirm-dialog.php';
+        require __DIR__ . '/tracking-popup.php';?>
+    </body>
+</html>
+<?php
+}
+function page_heading(string $title, string $description, string $action = ''): void
+{
+    ?>
+<div class="page-heading">
+    <div>
+        <h1><?= e(
+            $title,
+        ) ?></h1>
+        <p><?= e($description) ?></p>
+    </div>
+    <div class="heading-actions"><?= $action ?></div>
+</div>
+<?php
+}
+function new_button(): string
+{
+    return '<a class="btn primary" href="index.php?page=create">' .
+        icon('plus', 17) .
+        ' New requisition</a>';
+}
+function request_table(array $rows, bool $compact = false, bool $approvals = false): void
+{
+    ?>
+<div class="table-scroll">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>REQUISITION / DESTINATION</th>
+                <th>REQUESTING OFFICE</th>
+                <th>SCHEDULE</th>
+                <th><?= $approvals
+                    ? 'REQUEST TYPE / REQUIREMENT'
+                    : 'VEHICLE' ?></th>
+                <th>STATUS</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            foreach ($rows as $r):
+
+                $personnel = ($r['request_kind'] ?? '') === 'Personnel';
+                $detail = secure_record_url(
+                    'index.php?page=' . ($personnel ? 'personnel-request' : 'request') . '&id=' . $r['id'],
+                );
+                ?>
+            <tr>
+                <td>
+                    <a class="table-title" href="<?= e($detail) ?>"><?= e(
+                        $r['reference'],
+                    ) ?></a
+                    ><small><?= nl2br(e($r['destination'])) ?></small>
+                </td>
+                <td>
+                    <span class="office-chip"><?= e(
+                        $r['office_code'],
+                    ) ?></span
+                    ><span class="cell-office"><?= e($r['office_name']) ?></span
+                    ><small><?= e(
+                        $r['requester_name'],
+                    ) ?></small>
+                </td>
+                <td>
+                    <small>Start</small><strong><?= shortdate(
+                        $r['start_datetime'],
+                        'M j, Y · g:i A',
+                    ) ?></strong><small>End</small
+                    ><strong><?= shortdate(
+                        $r['end_datetime'],
+                        'M j, Y · g:i A',
+                    ) ?></strong>
+                </td>
+                <td>
+                    <?php if ($approvals): ?><?= e(
+                        $r['request_kind'],
+                    ) ?><small><?= e(
+                        $personnel ? $r['requested_role'] : $r['vehicle_type'],
+                    ) ?></small><?php else: ?><?= e($r['model'] ?? 'Awaiting assignment') ?><small><?= e(
+                        $r['plate'] ?? '—',
+                    ) ?></small><?php endif; ?>
+                </td>
+                <td><?= badge(
+                    $r['status'],
+                ) ?></td>
+                <td>
+                    <a
+                        class="icon-button"
+                        href="<?= e($detail) ?>"
+                        aria-label="View <?= e(
+                            $r['reference'],
+                        ) ?>"
+                        ><?= icon('chevron', 16) ?></a
+                    >
+                    <?= delete_link(
+                        $personnel ? 'personnel_bookings' : 'requisitions',
+                        $r,
+                    ) ?>
+                </td>
+            </tr>
+            <?php
+            endforeach;
+            if (!$rows): ?>
+            <tr>
+                <td colspan="6">
+                    <div class="empty-state">
+                        <?= icon(
+                            'file',
+                            30,
+                        ) ?>
+                        <h3>No requisitions found</h3>
+                        <p>Try another filter or create a new request.</p>
+                    </div>
+                </td>
+            </tr>
+            <?php endif;?>
+        </tbody>
+    </table>
+</div>
+<?php
+}
