@@ -1257,3 +1257,57 @@
   gap: 14px;
   flex-wrap: wrap;
 }
+
+/* Forest green and warm brass echo the system emblem. */
+.auth-brand .brand-organization {
+  color: #e4cca0;
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  margin-top: 9px;
+}
+.auth-public-brand .brand-organization {
+  color: #71603e;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+}
+.auth-brand {
+  gap: 18px;
+}
+.auth-logo {
+  width: 96px;
+  height: 96px;
+  filter: drop-shadow(0 6px 12px #0c211950);
+}
+.auth-story {
+  border: 1px solid #d5b98538;
+}
+.auth-story h1 em,
+.auth-brand-caption {
+  color: #e4cca0;
+}
+.auth-kicker i {
+  background: #d5b985;
+}
+.auth-story-footer {
+  border-color: #d5b98540;
+}
+.auth-public-brand {
+  gap: 16px;
+  flex-wrap: nowrap;
+}
+.auth-public-brand .auth-brand-caption {
+  color: #71603e;
+  line-height: 1.5;
+}
+.auth-public-card {
+  border-top: 3px solid #b99a68;
+}
+@media (max-width: 760px) {
+  .auth-brand {
+    gap: 14px;
+  }
+  .auth-logo {
+    width: 68px;
+    height: 68px;
+  }
+}

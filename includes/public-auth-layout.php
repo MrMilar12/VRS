@@ -7,6 +7,7 @@ function public_auth_start(string $title, string $description): void
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#203e32" />
+        <link rel="icon" type="image/png" sizes="64x64" href="assets/images/vprs-favicon.png" />
         <title><?= e(
             $title,
         ) ?> · VPRS</title>
@@ -15,9 +16,10 @@ function public_auth_start(string $title, string $description): void
     </head>
     <body class="auth-page">
         <main class="auth-public">
-            <a class="auth-public-brand" href="login.php"
-                ><?= icon('car', 28) ?> VPRS <span>VEHICLE &amp; PERSONNEL</span></a
-            >
+            <a class="auth-public-brand" href="login.php" aria-label="DepEd SDO-AURORA VPRS sign in">
+                <img class="system-logo" src="assets/images/vprs-logo.png" width="72" height="72" alt="" />
+                <div>VPRS<span class="auth-brand-caption">VEHICLE &amp; PERSONNEL</span><span class="brand-organization">DepEd SDO-AURORA</span></div>
+            </a>
             <section class="auth-public-card">
                 <h1><?= e($title) ?></h1>
                 <p class="auth-description"><?= e($description) ?></p>

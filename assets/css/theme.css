@@ -200,24 +200,24 @@
   }
   html[data-theme='dark'] {
     color-scheme: dark;
-    --bg: #111c17;
-    --white: #1b2a22;
-    --ink: #ecf3e7;
-    --text: #d4dfce;
-    --muted: #aebfa3;
-    --border: #43583b;
-    --green: #8bb76b;
-    --green-dark: #a0ca80;
-    --green-light: #2a3d25;
-    color: #d4dfce;
-    background: #111c17;
+    --bg: #191c1f;
+    --white: #24282c;
+    --ink: #f0efeb;
+    --text: #dadbd7;
+    --muted: #b8bcb8;
+    --border: #42484b;
+    --green: #9eb5aa;
+    --green-dark: #b3c8bd;
+    --green-light: #323e39;
+    color: #dadbd7;
+    background: #191c1f;
   }
   html[data-theme='dark'] body,
   html[data-theme='dark'] .app-shell {
-    --bg: #111c17;
-    --border: #43583b;
-    background: #111c17 !important;
-    color: #d4dfce;
+    --bg: #191c1f;
+    --border: #42484b;
+    background: #191c1f !important;
+    color: #dadbd7;
   }
   html[data-theme='dark']
     :is(
@@ -234,17 +234,17 @@
       .booking-chat,
       .booking-review
     ) {
-    background: #1b2a22 !important;
-    border-color: #5b7152 !important;
+    background: #24282c !important;
+    border-color: #535b5e !important;
     box-shadow: none !important;
   }
   html[data-theme='dark'] .sidebar {
-    background: #15271f !important;
-    border-color: #43583b;
+    background: #202326 !important;
+    border-color: #42484b;
   }
   html[data-theme='dark']
     :is(h1, h2, h3, .brand, .table-title, .stat-number, .profile-details dd, .detail-grid dd) {
-    color: #edf4e6 !important;
+    color: #f1f0ec !important;
   }
   html[data-theme='dark']
     :is(
@@ -269,10 +269,10 @@
       .assistant-eyebrow,
       .assistant-welcome > p
     ) {
-    color: #b6c9a9 !important;
+    color: #bcc2bd !important;
   }
   html[data-theme='dark'] :is(strong, .profile-details dd, .detail-grid dd, .calendar-nav h2) {
-    color: #e5efde;
+    color: #e5e7e2;
   }
   html[data-theme='dark']
     :is(
@@ -331,13 +331,13 @@
       .data-view-switch button[aria-pressed='true'],
       .theme-switch button[aria-pressed='true']
     ) {
-    background: #b1d18d !important;
-    color: #192c17 !important;
-    border-color: #b1d18d !important;
+    background: #a8bdb0 !important;
+    color: #23332a !important;
+    border-color: #a8bdb0 !important;
     box-shadow: none !important;
   }
   html[data-theme='dark'] :is(.btn:hover, .icon-button:hover, .text-link:hover) {
-    background: #344c2c;
+    background: #39473f;
     color: #f0f7ea;
   }
   html[data-theme='dark'] .btn.danger {
@@ -346,56 +346,56 @@
     background: #382822 !important;
   }
   html[data-theme='dark'] :is(input, select, textarea, .search-field, .place-control) {
-    color: #ecf3e7 !important;
-    background: #132119 !important;
-    border-color: #738b64 !important;
+    color: #f0efeb !important;
+    background: #1d2124 !important;
+    border-color: #76877d !important;
   }
   html[data-theme='dark'] :is(input, textarea)::placeholder {
-    color: #a7b79c !important;
+    color: #abb6ad !important;
   }
   html[data-theme='dark'] :is(input, select, textarea):focus {
     outline-color: #78985c !important;
-    border-color: #b4d892 !important;
+    border-color: #a8bdb0 !important;
   }
   html[data-theme='dark'] :is(button, a, summary):focus-visible {
-    outline-color: #b4d892 !important;
+    outline-color: #a8bdb0 !important;
   }
   html[data-theme='dark'] .data-table th {
-    background: #273b26 !important;
+    background: #303639 !important;
     color: #d5e7c8 !important;
-    border-color: #4b6240 !important;
+    border-color: #485351 !important;
   }
   html[data-theme='dark'] .data-table td {
-    background: #1b2a22 !important;
+    background: #24282c !important;
     color: #d9e4d1 !important;
-    border-color: #394d32 !important;
+    border-color: #3d4548 !important;
   }
   html[data-theme='dark'] .data-table tr:hover td {
-    background: #23362a !important;
+    background: #2b3233 !important;
   }
   html[data-theme='dark'] :is(.data-cards, .vehicle-grid:not(.vehicle-list-view)) {
-    background: #122019 !important;
+    background: #1d2124 !important;
   }
   html[data-theme='dark'] .data-cards tbody tr {
-    background: #1b2a22 !important;
-    border-color: #5b764a !important;
+    background: #24282c !important;
+    border-color: #53605a !important;
     box-shadow: 0 5px 18px #0003 !important;
   }
   html[data-theme='dark'] .data-cards td::before {
     color: #afc89d !important;
   }
   html[data-theme='dark'] .data-cards td:first-child {
-    background: #304b34 !important;
+    background: #36443e !important;
     color: #fff !important;
   }
   html[data-theme='dark'] .data-cards td:first-child :is(strong, a, small) {
     color: #edf6e6 !important;
   }
   html[data-theme='dark'] .data-cards .data-view-actions {
-    background: #1e3323 !important;
+    background: #272f2c !important;
   }
   html[data-theme='dark'] .data-cards .data-view-actions a {
-    background: #2d472d !important;
+    background: #394840 !important;
     color: #e1f0d4 !important;
     border-color: #688255 !important;
   }
@@ -409,9 +409,9 @@
       .profile-auth-setup,
       .place-combobox [role='listbox']
     ) {
-    background: #1b2a22 !important;
+    background: #24282c !important;
     color: #dae8cf !important;
-    border-color: #4b6240 !important;
+    border-color: #485351 !important;
   }
   html[data-theme='dark'] :is(.green, .badge.green) {
     background: #2c4932 !important;
@@ -438,8 +438,8 @@
     color: #c8d6c1 !important;
   }
   html[data-theme='dark'] :is(.welcome-banner, .assistant-welcome) {
-    background: radial-gradient(ellipse at 50% 0%, #344b2e, transparent 75%), #1b2a22 !important;
-    border-color: #43583b !important;
+    background: radial-gradient(ellipse at 50% 0%, #344b2e, transparent 75%), #24282c !important;
+    border-color: #42484b !important;
   }
   html[data-theme='dark'] :is(.welcome-banner p, .welcome-banner a, .assistant-welcome h2 em) {
     color: #b6d995 !important;
@@ -450,16 +450,16 @@
     color: #d3e8bd;
   }
   html[data-theme='dark'] .fleet-donut > div {
-    background: #1b2a22 !important;
-    box-shadow: 0 0 0 5px #1b2a22 !important;
+    background: #24282c !important;
+    box-shadow: 0 0 0 5px #24282c !important;
   }
   html[data-theme='dark'] :is(.fleet-donut strong, .fleet-donut span, .fleet-legend strong) {
     color: #d9e8cc !important;
   }
   html[data-theme='dark'] .booking-layout {
     --assistant-ink: #e7f1df;
-    --assistant-muted: #b6c9a9;
-    --assistant-line: #43583b;
+    --assistant-muted: #bcc2bd;
+    --assistant-line: #42484b;
   }
   html[data-theme='dark']
     :is(
@@ -511,12 +511,12 @@
       .timeline-row,
       .timeline-header
     ) {
-    background: #1b2a22 !important;
-    border-color: #43583b !important;
+    background: #24282c !important;
+    border-color: #42484b !important;
     color: #d1e0c5 !important;
   }
   html[data-theme='dark'] :is(.calendar-cell.outside, .weekday, .calendar-cell.today) {
-    background: #273b26 !important;
+    background: #303639 !important;
   }
   html[data-theme='dark']
     :is(.day-number, .more-events, .timeline-hours, .agenda-time, .calendar-nav button) {
@@ -525,8 +525,8 @@
   html[data-theme='dark'] .timeline-track {
     background: repeating-linear-gradient(
       to right,
-      #43583b 0,
-      #43583b 1px,
+      #42484b 0,
+      #42484b 1px,
       transparent 1px,
       transparent 8.333%
     );
@@ -543,9 +543,9 @@
   }
   /* Nested surfaces need their own palette; changing the parent card is not enough. */
   html[data-theme='dark'] :is(.notification-row, .agenda-item) {
-    background: #1b2a22 !important;
+    background: #24282c !important;
     color: #dce9d5 !important;
-    border-color: #43583b !important;
+    border-color: #42484b !important;
   }
   html[data-theme='dark'] .notification-row.unread {
     background: #2a4230 !important;
@@ -561,11 +561,11 @@
       .trip-item:hover
     ) {
     background: #334e38 !important;
-    color: #edf4e6 !important;
+    color: #f1f0ec !important;
   }
   html[data-theme='dark']
     :is(.notification-row strong, .requester-summary strong, .agenda-item strong) {
-    color: #edf4e6 !important;
+    color: #f1f0ec !important;
   }
   html[data-theme='dark']
     :is(
@@ -595,10 +595,10 @@
   }
   html[data-theme='dark'] .place-combobox :is([role='option']:hover, [aria-selected='true']) {
     background: #35543c !important;
-    color: #edf4e6 !important;
+    color: #f1f0ec !important;
   }
   html[data-theme='dark'] :is(.empty-state, .place-empty, .notification-row > svg) {
-    color: #b6c9a9 !important;
+    color: #bcc2bd !important;
   }
   html[data-theme='dark'] dialog::backdrop {
     background: #060e0ab3;

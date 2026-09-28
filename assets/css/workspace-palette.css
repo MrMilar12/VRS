@@ -1,0 +1,40 @@
+/* Warm neutral surfaces with restrained sage accents; print styles stay independent. */
+@media screen {
+  html:not([data-theme='dark']) {
+    --green: #53695d;
+    --green-dark: #43584c;
+    --green-light: #eef1ec;
+    --ink: #333d39;
+    --text: #505953;
+    --muted: #72776e;
+    --border: #e3e1da;
+    --bg: #f6f4f0;
+  }
+  html:not([data-theme='dark']) .sidebar {
+    background: #fdfcf9;
+    border-right: 1px solid #e3e1da;
+    color: #505953;
+  }
+  html:not([data-theme='dark']) .sidebar .brand { color: #333d39; }
+  html:not([data-theme='dark']) .sidebar :is(.brand-sub, .workspace small, .workspace-symbol, .sidebar-bottom small) { color: #76796e; }
+  html:not([data-theme='dark']) .sidebar .brand-organization { color: #85704d; }
+  html:not([data-theme='dark']) .workspace { background: #f1efe9; border-color: #e5e0d6; color: #505953; }
+  html:not([data-theme='dark']) .nav-label { color: #7a7c72; }
+  html:not([data-theme='dark']) .nav-item { color: #61685f; }
+  html:not([data-theme='dark']) .nav-item:hover { background: #f0eee8; color: #333d39; }
+  html:not([data-theme='dark']) .nav-item.active { background: #e7ece5; color: #40574a; box-shadow: none; }
+  html:not([data-theme='dark']) .sidebar-bottom { color: #636d60; }
+  html:not([data-theme='dark']) .online-dot { background: #839c87; }
+  html:not([data-theme='dark']) .topbar { background: #f6f4f0; border-color: #e3e1da; }
+  html:not([data-theme='dark']) .avatar { background: #e9ece5; color: #53695d; }
+  html:not([data-theme='dark']) .btn.primary { background: #53695d; border-color: #53695d; color: #fff; box-shadow: none; }
+  html:not([data-theme='dark']) .btn.primary:hover { background: #43584c; }
+  html:not([data-theme='dark']) .welcome-banner { background: #efede5; border-color: #e1ddcf; }
+  html:not([data-theme='dark']) .welcome-banner :is(p, .eyebrow) { color: #6a6e60; }
+  html:not([data-theme='dark']) .art-circle { background: #e1e3d6; }
+  html:not([data-theme='dark']) .road { border-color: #cdd2c3; }
+  html:not([data-theme='dark']) .theme-switch { background: #eeede7; border-color: #ddded4; }
+  html:not([data-theme='dark']) .theme-switch button { color: #646d61; }
+  html:not([data-theme='dark']) .theme-switch button[aria-pressed='true'] { color: #43584c; }
+  html:not([data-theme='dark']) :is(a, button):focus-visible { outline-color: #8d9e91; }
+}

@@ -14,7 +14,8 @@ function layout_start(string $page, string $title): void
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#174c40" />
+        <meta name="theme-color" content="#f6f4f0" />
+        <link rel="icon" type="image/png" sizes="64x64" href="assets/images/vprs-favicon.png" />
         <title><?= e($title) ?> · VPRS</title>
         <script src="assets/js/theme.js?v=<?= filemtime(__DIR__ . '/../assets/js/theme.js') ?>"></script>
         <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__ . '/../assets/css/style.css') ?>" />
@@ -22,17 +23,17 @@ function layout_start(string $page, string $title): void
         <link rel="stylesheet" href="assets/css/booking-assistant.css?v=<?= filemtime(__DIR__ . '/../assets/css/booking-assistant.css') ?>" />
         <?php endif; ?>
         <link rel="stylesheet" href="assets/css/theme.css?v=<?= filemtime(__DIR__ . '/../assets/css/theme.css') ?>" />
+        <link rel="stylesheet" href="assets/css/workspace-palette.css?v=<?= filemtime(__DIR__ . '/../assets/css/workspace-palette.css') ?>" />
         <script src="assets/js/data-views.js?v=<?= filemtime(__DIR__ . '/../assets/js/data-views.js') ?>" defer></script>
         <script src="assets/js/app.js?v=<?= filemtime(__DIR__ . '/../assets/js/app.js') ?>" defer></script>
     </head>
     <body>
         <div class="app-shell">
             <aside class="sidebar" id="sidebar">
-                <a class="brand" href="index.php"
-                    ><span class="brand-icon requisition-brand-mark" aria-hidden="true"
-                        ><?= icon('car', 24) ?><span><?= icon('users', 12) ?></span></span
-                    ><span>VPRS<span class="brand-sub">VEHICLE &amp; PERSONNEL</span></span></a
-                >
+                <a class="brand" href="index.php" aria-label="DepEd SDO-AURORA VPRS home">
+                    <img class="system-logo sidebar-logo" src="assets/images/vprs-logo.png" width="60" height="60" alt="" />
+                    <span>VPRS<span class="brand-sub">VEHICLE &amp; PERSONNEL</span><span class="brand-organization">DepEd SDO-AURORA</span></span>
+                </a>
                 <div class="workspace">
                     <span class="workspace-symbol"><?= icon('office', 19) ?></span>
                     <div>Government workspace<small><?= e(setting('organization')) ?></small></div>

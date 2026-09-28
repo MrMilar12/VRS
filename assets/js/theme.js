@@ -13,7 +13,7 @@
     root.dataset.theme = mode;
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute('content', mode === 'dark' ? '#15221d' : '#174c40');
+      ?.setAttribute('content', mode === 'dark' ? '#202326' : '#f6f4f0');
     document
       .querySelectorAll('[data-theme-mode]')
       .forEach((button) =>

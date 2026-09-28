@@ -5268,6 +5268,30 @@ label[hidden] {
   letter-spacing: 0.8px;
   line-height: 1.5;
 }
+.brand-organization {
+  display: block;
+  margin-top: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.3px;
+}
+.system-logo {
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 5px #162e2426);
+}
+.sidebar .brand {
+  gap: 10px;
+  padding: 0 0 18px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid #b79a6533;
+}
+.sidebar .sidebar-logo {
+  width: 60px;
+  height: 60px;
+}
 .requisition-brand-mark {
   position: relative;
   flex-shrink: 0;
