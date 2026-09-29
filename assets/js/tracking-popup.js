@@ -17,13 +17,51 @@
       : async () => ({});
 
   if (island && searchInput && searchButton) {
+    let islandMotion = null;
+    let searchMotion = null;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const toggleIsland = (expanded) => {
+      if (island.classList.contains('is-expanded') === expanded) return;
+      const before = island.getBoundingClientRect();
+      const previousRadius = getComputedStyle(island).borderRadius;
+      islandMotion?.cancel();
+      searchMotion?.cancel();
       island.classList.toggle('is-expanded', expanded);
       header.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      if (!reducedMotion.matches && typeof island.animate === 'function') {
+        const after = island.getBoundingClientRect();
+        if (after.width && after.height) {
+          islandMotion = island.animate(
+            [
+              {
+                transform: `translate(${before.left - after.left}px, ${before.top - after.top}px) scale(${before.width / after.width}, ${before.height / after.height})`,
+                borderRadius: previousRadius,
+              },
+              { transform: 'none', borderRadius: getComputedStyle(island).borderRadius },
+            ],
+            {
+              duration: expanded ? 620 : 460,
+              easing: 'cubic-bezier(.16,1,.3,1)',
+            },
+          );
+          if (expanded) {
+            searchMotion = header.animate(
+              [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }],
+              { duration: 300, delay: 120, fill: 'backwards', easing: 'ease-out' },
+            );
+          }
+        }
+      }
       if (expanded) {
         requestAnimationFrame(() => searchInput.focus({ preventScroll: true }));
+      } else if (document.activeElement === searchInput) {
+        searchButton.focus({ preventScroll: true });
       }
     };
+    window.addEventListener('resize', () => {
+      islandMotion?.cancel();
+      searchMotion?.cancel();
+    });
 
     header.addEventListener('pointerdown', (event) => {
       const target = event.target;
@@ -84,7 +122,7 @@
   function position() {
     if (!island || popup.hidden) return;
     const rect = island.getBoundingClientRect(),
-      width = Math.min(Math.max(rect.width, 360), 560, window.innerWidth - 24),
+      width = Math.min(rect.width, window.innerWidth - 24),
       left = Math.max(
         12,
         Math.min(rect.left + (rect.width - width) / 2, window.innerWidth - width - 12),
@@ -151,7 +189,7 @@
       finish();
       return;
     }
-    const pill = header.getBoundingClientRect(),
+    const pill = island.getBoundingClientRect(),
       panel = popup.getBoundingClientRect();
     const start = from || (opening ? pill : panel),
       end = opening ? panel : pill;
@@ -259,9 +297,9 @@
     settle();
     opener = document.activeElement;
     phase = 'opening';
+    island?.classList.add('is-expanded');
     popup.hidden = false;
     position();
-    island?.classList.add('is-expanded');
     header.setAttribute('aria-expanded', 'true');
     morph(true, () => {
       phase = 'open';
@@ -279,9 +317,9 @@
       () => {
         popup.hidden = true;
         phase = 'closed';
-        island?.classList.remove('is-expanded');
-        header.setAttribute('aria-expanded', 'false');
-        opener?.focus({ preventScroll: true });
+        // Return to the same search surface that the panel grew from.
+        header.setAttribute('aria-expanded', 'true');
+        (searchInput || opener)?.focus({ preventScroll: true });
       },
       from,
     );

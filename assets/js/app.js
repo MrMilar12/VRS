@@ -38,9 +38,44 @@ window.assistantWelcomeLocation = async (message) => {
     }
   });
 };
-document
-  .querySelector('[data-toggle-sidebar]')
-  ?.addEventListener('click', () => document.querySelector('.sidebar').classList.toggle('open'));
+const sidebar = document.querySelector('#sidebar');
+const sidebarToggle = document.querySelector('[data-toggle-sidebar]');
+const sidebarBackdrop = document.querySelector('[data-close-sidebar]');
+if (sidebar && sidebarToggle && sidebarBackdrop) {
+  const mobileNavigation = window.matchMedia('(max-width: 720px)');
+  const setNavigation = (open, restoreFocus = false) => {
+    const expanded = mobileNavigation.matches && open;
+    sidebar.classList.toggle('open', expanded);
+    sidebar.inert = mobileNavigation.matches && !expanded;
+    sidebarToggle.setAttribute('aria-expanded', String(expanded));
+    sidebarBackdrop.hidden = !expanded;
+    document.body.classList.toggle('navigation-open', expanded);
+    if (expanded) sidebar.querySelector('a')?.focus();
+    else if (restoreFocus) sidebarToggle.focus();
+  };
+  sidebarToggle.addEventListener('click', () => setNavigation(!sidebar.classList.contains('open')));
+  sidebarBackdrop.addEventListener('click', () => setNavigation(false, true));
+  sidebar.addEventListener('click', (event) => {
+    if (event.target.closest('a')) setNavigation(false);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (!sidebar.classList.contains('open')) return;
+    if (event.key === 'Escape') setNavigation(false, true);
+    if (event.key === 'Tab') {
+      const links = [...sidebar.querySelectorAll('a[href], button:not([disabled])')];
+      const first = links[0], last = links[links.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    }
+  });
+  mobileNavigation.addEventListener('change', () => setNavigation(false));
+  setNavigation(false);
+}
 document.querySelectorAll('form[data-confirm]').forEach((form) =>
   form.addEventListener('submit', (event) => {
     if (!form.hasAttribute('data-admin-confirm') && !confirm(form.dataset.confirm))

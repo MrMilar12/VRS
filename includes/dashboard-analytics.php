@@ -72,11 +72,11 @@ function dashboard_analytics(
 }
 function analytics_bars(array $values, string $tone = ''): void
 {
-    $max = max(1, ...array_values($values));
     if (!$values) {
         echo '<p class="analytics-empty">No data in this selection.</p>';
         return;
     }
+    $max = max(1, ...array_values($values));
     foreach ($values as $label => $value): ?>
 <div class="analytics-bar-row">
     <div><span><?= e(

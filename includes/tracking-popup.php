@@ -7,13 +7,15 @@
     hidden
 >
     <div class="header-help-heading">
-        <span class="header-help-mark" aria-hidden="true"><?= icon(
-            'users',
-            22,
-        ) ?></span>
+        <span class="header-help-mark" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z" fill="currentColor" />
+                <circle cx="20" cy="4" r="2" fill="currentColor" opacity=".65" />
+            </svg>
+        </span>
         <div>
             <h2 id="header-help-title">VPRS assistant</h2>
-            <p>Questions, guidance &amp; tracking</p>
+            <p>A little help for your next trip</p>
         </div>
         <button
             type="button"

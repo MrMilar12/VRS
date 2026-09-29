@@ -24,6 +24,7 @@ function layout_start(string $page, string $title): void
         <?php endif; ?>
         <link rel="stylesheet" href="assets/css/theme.css?v=<?= filemtime(__DIR__ . '/../assets/css/theme.css') ?>" />
         <link rel="stylesheet" href="assets/css/workspace-palette.css?v=<?= filemtime(__DIR__ . '/../assets/css/workspace-palette.css') ?>" />
+        <link rel="stylesheet" href="assets/css/mobile.css?v=<?= filemtime(__DIR__ . '/../assets/css/mobile.css') ?>" />
         <script src="assets/js/data-views.js?v=<?= filemtime(__DIR__ . '/../assets/js/data-views.js') ?>" defer></script>
         <script src="assets/js/app.js?v=<?= filemtime(__DIR__ . '/../assets/js/app.js') ?>" defer></script>
     </head>
@@ -132,12 +133,15 @@ function layout_start(string $page, string $title): void
                     >
                 </div>
             </aside>
+            <button type="button" class="sidebar-backdrop" data-close-sidebar aria-label="Close navigation" hidden></button>
             <div class="main-shell">
                 <header class="topbar">
                     <div class="breadcrumb">
                         <button
                             class="icon-button mobile-menu"
                             aria-label="Toggle navigation"
+                            aria-controls="sidebar"
+                            aria-expanded="false"
                             data-toggle-sidebar
                         >
                             <?= icon('grid') ?></button

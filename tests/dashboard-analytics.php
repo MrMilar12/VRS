@@ -49,4 +49,11 @@ check_analytics(
     $a['total'] === 0 && count($a['months']) === 1,
     'Empty data gives zero totals and current month',
 );
+ob_start();
+analytics_bars([]);
+$emptyBars = ob_get_clean();
+check_analytics(
+    str_contains($emptyBars, 'No data in this selection.'),
+    'Empty chart data renders its empty state',
+);
 echo "All analytics checks passed.\n";
