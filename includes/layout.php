@@ -25,14 +25,25 @@ function layout_start(string $page, string $title): void
         <link rel="stylesheet" href="assets/css/theme.css?v=<?= filemtime(__DIR__ . '/../assets/css/theme.css') ?>" />
         <link rel="stylesheet" href="assets/css/workspace-palette.css?v=<?= filemtime(__DIR__ . '/../assets/css/workspace-palette.css') ?>" />
         <link rel="stylesheet" href="assets/css/mobile.css?v=<?= filemtime(__DIR__ . '/../assets/css/mobile.css') ?>" />
+        <link rel="stylesheet" href="assets/css/boot-screen.css?v=<?= filemtime(__DIR__ . '/../assets/css/boot-screen.css') ?>" />
+        <script src="assets/js/boot-screen.js?v=<?= filemtime(__DIR__ . '/../assets/js/boot-screen.js') ?>" defer></script>
         <script src="assets/js/data-views.js?v=<?= filemtime(__DIR__ . '/../assets/js/data-views.js') ?>" defer></script>
         <script src="assets/js/app.js?v=<?= filemtime(__DIR__ . '/../assets/js/app.js') ?>" defer></script>
     </head>
     <body>
+        <div class="system-boot" id="system-boot" aria-hidden="true">
+            <div class="system-boot__content">
+                <img src="assets/images/vprslogo.png" width="120" height="120" alt="" />
+                <span class="system-boot__name">VPRS</span>
+                <span class="system-boot__caption">DepEd SDO-AURORA</span>
+                <span class="system-boot__track"><span></span></span>
+                <span class="system-boot__status">Preparing your workspace</span>
+            </div>
+        </div>
         <div class="app-shell">
             <aside class="sidebar" id="sidebar">
                 <a class="brand" href="index.php" aria-label="DepEd SDO-AURORA VPRS home">
-                    <img class="system-logo sidebar-logo" src="assets/images/vprs-logo.png" width="60" height="60" alt="" />
+                    <img class="system-logo sidebar-logo" src="assets/images/vprslogo.png" width="60" height="60" alt="" />
                     <span>VPRS<span class="brand-sub">VEHICLE &amp; PERSONNEL</span><span class="brand-organization">DepEd SDO-AURORA</span></span>
                 </a>
                 <div class="workspace">

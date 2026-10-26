@@ -9,7 +9,7 @@
     if (saved === 'light' || saved === 'dark') preference = saved;
   } catch (error) {}
   function apply() {
-    const mode = preference || (system.matches ? 'dark' : 'light');
+    const mode = preference || 'dark';
     root.dataset.theme = mode;
     document
       .querySelector('meta[name="theme-color"]')
@@ -33,9 +33,6 @@
     );
     document.querySelector('[data-theme-switch]')?.removeAttribute('hidden');
     apply();
-  });
-  system.addEventListener('change', () => {
-    if (!preference) apply();
   });
   window.addEventListener('storage', (event) => {
     if (event.key === key || event.key === null) {

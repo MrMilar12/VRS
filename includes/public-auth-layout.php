@@ -17,7 +17,7 @@ function public_auth_start(string $title, string $description): void
     <body class="auth-page">
         <main class="auth-public">
             <a class="auth-public-brand" href="login.php" aria-label="DepEd SDO-AURORA VPRS sign in">
-                <img class="system-logo" src="assets/images/vprs-logo.png" width="72" height="72" alt="" />
+                <img class="system-logo" src="assets/images/vprslogo.png" width="72" height="72" alt="" />
                 <div>VPRS<span class="auth-brand-caption">VEHICLE &amp; PERSONNEL</span><span class="brand-organization">DepEd SDO-AURORA</span></div>
             </a>
             <section class="auth-public-card">
