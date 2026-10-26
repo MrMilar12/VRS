@@ -5,6 +5,19 @@
   const minimumVisibleMs = 700;
   const startedAt = performance.now();
   let leaving = false;
+  const welcomeVideo = boot.querySelector('.system-boot__video');
+
+  if (welcomeVideo) {
+    const backdrop = welcomeVideo.cloneNode(true);
+    backdrop.removeAttribute('id');
+    backdrop.className = 'system-boot__video-backdrop';
+    backdrop.setAttribute('aria-hidden', 'true');
+    backdrop.loop = true;
+    backdrop.muted = true;
+    backdrop.controls = false;
+    boot.querySelector('.system-boot__content')?.prepend(backdrop);
+    backdrop.play().catch(() => {});
+  }
 
   const dismiss = () => {
     if (leaving) return;
@@ -28,9 +41,16 @@
   };
 
   // Show the brand on full page navigation, including hard refreshes.
-  if (document.readyState === 'complete') dismissWhenReady();
-  else window.addEventListener('load', dismissWhenReady, { once: true });
-  window.setTimeout(dismiss, 3500);
+  if (welcomeVideo) {
+    welcomeVideo.addEventListener('ended', dismiss, { once: true });
+    welcomeVideo.addEventListener('error', dismiss, { once: true });
+    // Keep a broken or unsupported video from blocking the newly signed-in user.
+    window.setTimeout(dismiss, 12000);
+  } else {
+    if (document.readyState === 'complete') dismissWhenReady();
+    else window.addEventListener('load', dismissWhenReady, { once: true });
+    window.setTimeout(dismiss, 3500);
+  }
 
   // Prime the next same-origin document before leaving the current workspace.
   document.addEventListener('click', (event) => {

@@ -246,6 +246,7 @@ function auth_complete(array $account, bool $mfa = true, ?string $factorCode = n
         'auth_started' => time(),
         'auth_seen' => time(),
         'auth_credential' => hash('sha256', $account['password_hash']),
+        'welcome_animation' => true,
     ];
     $user = $account;
 }
