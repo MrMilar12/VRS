@@ -97,6 +97,30 @@
   filter: drop-shadow(0 12px 42px rgba(0, 0, 0, .28));
 }
 
+.login-welcome__fallback {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  width: min(58vw, 320px);
+  height: auto;
+  object-fit: contain;
+  opacity: 0;
+  transform: translate(-50%, -62%);
+  filter: drop-shadow(0 14px 32px rgba(0, 0, 0, .35));
+  transition: opacity 500ms ease;
+}
+
+.login-welcome.is-fallback .system-boot__video,
+.login-welcome.is-fallback .system-boot__video-backdrop {
+  display: none;
+}
+
+.login-welcome.is-fallback .login-welcome__fallback {
+  opacity: 1;
+  animation: boot-pulse 1.8s ease-in-out infinite;
+}
+
 .system-boot__welcome-copy {
   position: absolute;
   z-index: 2;
@@ -148,6 +172,52 @@
   letter-spacing: .23em;
   text-shadow: 0 1px 8px rgba(0, 0, 0, .75);
   animation: boot-line-arrive 650ms 800ms both;
+}
+
+.login-welcome__skip {
+  position: absolute;
+  z-index: 3;
+  top: max(20px, env(safe-area-inset-top));
+  right: max(20px, env(safe-area-inset-right));
+  min-width: 72px;
+  min-height: 42px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, .35);
+  border-radius: 999px;
+  background: rgba(12, 22, 38, .48);
+  color: #fff;
+  font: 650 12px/1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: .04em;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+
+.login-welcome__skip:hover,
+.login-welcome__skip:focus-visible {
+  background: rgba(255, 255, 255, .2);
+  outline: 2px solid rgba(255, 255, 255, .8);
+  outline-offset: 3px;
+}
+
+.login-welcome__play:not([hidden]) {
+  position: absolute;
+  z-index: 3;
+  bottom: max(17vh, 110px);
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px 20px;
+  border: 1px solid rgba(255, 255, 255, .65);
+  border-radius: 999px;
+  background: rgba(12, 22, 38, .76);
+  color: #fff;
+  font: 650 13px/1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .3);
+  transform: translateX(-50%);
+  cursor: pointer;
 }
 
 @keyframes boot-copy-arrive {

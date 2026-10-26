@@ -2,8 +2,6 @@
 function layout_start(string $page, string $title): void
 {
     global $user, $config;
-    $showWelcomeAnimation = !empty($_SESSION['welcome_animation']);
-    unset($_SESSION['welcome_animation']);
     $pending = is_role('Administrator') ? count(approval_requests()) : 0;
     $accountRequests = is_role('Administrator')
         ? (int) one("SELECT COUNT(*) n FROM users WHERE status='Pending'")['n']
@@ -33,24 +31,13 @@ function layout_start(string $page, string $title): void
         <script src="assets/js/app.js?v=<?= filemtime(__DIR__ . '/../assets/js/app.js') ?>" defer></script>
     </head>
     <body>
-        <div class="system-boot<?= $showWelcomeAnimation ? ' system-boot--welcome' : '' ?>" id="system-boot" aria-hidden="true"<?= $showWelcomeAnimation ? ' data-welcome="true"' : '' ?>>
+        <div class="system-boot" id="system-boot" aria-hidden="true">
             <div class="system-boot__content">
-                <?php if ($showWelcomeAnimation): ?>
-                <video class="system-boot__video" autoplay muted playsinline preload="auto" aria-label="VPRS welcome animation">
-                    <source src="assets/videos/vprs-welcome.mp4" type="video/mp4" />
-                </video>
-                <div class="system-boot__welcome-copy" aria-live="polite">
-                    <span>Welcome to</span>
-                    <strong>VPRS</strong>
-                    <small>DepEd SDO-AURORA</small>
-                </div>
-                <?php else: ?>
                 <img src="assets/images/vprslogo.png" width="120" height="120" alt="" />
                 <span class="system-boot__name">VPRS</span>
                 <span class="system-boot__caption">DepEd SDO-AURORA</span>
                 <span class="system-boot__track"><span></span></span>
                 <span class="system-boot__status">Preparing your workspace</span>
-                <?php endif; ?>
             </div>
         </div>
         <div class="app-shell">
