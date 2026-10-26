@@ -70,20 +70,6 @@
     #101a2a;
 }
 
-.system-boot__video-backdrop {
-  position: absolute;
-  z-index: -1;
-  inset: -8%;
-  width: 116%;
-  height: 116%;
-  max-width: none;
-  max-height: none;
-  object-fit: cover;
-  filter: blur(34px) brightness(.48) saturate(1.3);
-  opacity: .72;
-  transform: scale(1.05);
-}
-
 .system-boot__video {
   position: relative;
   z-index: 1;
@@ -112,10 +98,6 @@
 }
 
 .login-welcome.is-fallback .system-boot__video,
-.login-welcome.is-fallback .system-boot__video-backdrop {
-  display: none;
-}
-
 .login-welcome.is-fallback .login-welcome__fallback {
   opacity: 1;
   animation: boot-pulse 1.8s ease-in-out infinite;

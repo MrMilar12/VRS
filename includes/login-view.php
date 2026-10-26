@@ -24,7 +24,7 @@
         <div class="system-boot system-boot--welcome login-welcome" id="login-welcome" aria-label="Welcome to VPRS">
             <div class="system-boot__content">
                 <img class="login-welcome__fallback" src="assets/images/vprslogo.png" width="260" height="260" alt="VPRS logo" />
-                <video class="system-boot__video" autoplay muted playsinline preload="auto" aria-label="VPRS welcome animation">
+                <video class="system-boot__video" autoplay muted playsinline preload="auto" poster="assets/images/vprslogo.png" aria-label="VPRS welcome animation">
                     <source src="assets/videos/vprs-welcome.mp4" type="video/mp4" />
                 </video>
                 <div class="system-boot__welcome-copy">
