@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 384" role="img" aria-labelledby="title desc">
+  <title id="title">VPRS DepEd color emblem</title>
+  <desc id="desc">A vehicle and personnel requisition emblem with blue, red, and gold accents inspired by DepEd colors.</desc>
+  <defs>
+    <linearGradient id="seal" x1="35" y1="20" x2="350" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f7d77c"/>
+      <stop offset=".42" stop-color="#b98228"/>
+      <stop offset=".7" stop-color="#f0c65c"/>
+      <stop offset="1" stop-color="#8b5b1e"/>
+    </linearGradient>
+    <linearGradient id="field" x1="58" y1="45" x2="308" y2="338" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#164b39"/>
+      <stop offset="1" stop-color="#092c23"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="256" y1="194" x2="357" y2="287" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2376ba"/>
+      <stop offset="1" stop-color="#104c86"/>
+    </linearGradient>
+    <pattern id="contours" width="32" height="24" patternUnits="userSpaceOnUse">
+      <path d="M-8 18C2 4 14 3 22 11s13 9 20-1" fill="none" stroke="#b7d5c1" stroke-opacity=".17" stroke-width="1.5"/>
+    </pattern>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#15231c" flood-opacity=".28"/>
+    </filter>
+    <clipPath id="inner">
+      <circle cx="192" cy="184" r="151"/>
+    </clipPath>
+  </defs>
+
+  <!-- Gold seal rim -->
+  <circle cx="192" cy="184" r="174" fill="#532f18" opacity=".35"/>
+  <circle cx="192" cy="180" r="173" fill="url(#seal)"/>
+  <circle cx="192" cy="180" r="163" fill="#173b2b" stroke="#fff0bb" stroke-opacity=".75" stroke-width="2"/>
+  <circle cx="192" cy="180" r="151" fill="url(#field)"/>
+  <g clip-path="url(#inner)">
+    <path d="M35 221C72 173 87 113 148 90c55-20 94 5 136-39 28-30 47-9 69-22v327H30z" fill="url(#contours)"/>
+    <path d="M38 302c55-30 96-41 154-39 62 2 108 17 157 49v61H37z" fill="#092c23" opacity=".7"/>
+  </g>
+
+  <!-- Gold sun/person symbol -->
+  <circle cx="304" cy="119" r="38" fill="url(#seal)" stroke="#ffe7a0" stroke-width="2" filter="url(#shadow)"/>
+
+  <!-- Vehicle silhouette in warm gold -->
+  <g fill="url(#seal)" stroke="#ffe8a5" stroke-linejoin="round" stroke-width="2.4" filter="url(#shadow)">
+    <path d="M34 220 94 171l39-42c6-7 14-11 24-11h125v17H163l-30 33h86c10 0 16 7 13 17l-7 24h-27l7-23h-49l-21 22c-9 9-18 14-31 14H53c-12 0-19-6-19-15v-7Z"/>
+    <path d="m163 130-35 38h78l12-38z" fill="#e9c873"/>
+    <path d="M227 150h20c8 0 13 6 11 14l-5 15h-38l5-19c1-6 3-10 7-10z"/>
+    <path d="M99 225c17 0 29-7 39-18l11-12h40l-7 24c-2 8-8 13-18 13h-65z"/>
+    <path d="M183 244c5-27 19-43 40-43s35 16 39 43h-15c-4-19-11-28-24-28s-21 9-25 28z"/>
+  </g>
+  <circle cx="223" cy="240" r="13" fill="#102d24" stroke="#e4bb55" stroke-width="5"/>
+
+  <!-- Red and blue accents on the vehicle -->
+  <path d="M50 211c22-15 43-30 64-51" fill="none" stroke="#c9373f" stroke-linecap="round" stroke-width="6"/>
+  <path d="M59 219h44" fill="none" stroke="#2878b8" stroke-linecap="round" stroke-width="6"/>
+
+  <!-- People: gold heads and shoulders -->
+  <circle cx="302" cy="208" r="44" fill="url(#seal)" stroke="#fff0b8" stroke-width="2" filter="url(#shadow)"/>
+  <circle cx="284" cy="196" r="8" fill="#174b38"/>
+  <circle cx="318" cy="196" r="8" fill="#174b38"/>
+  <path d="M271 225c3-15 9-22 17-22s14 7 17 22m-2 0c3-15 9-22 17-22s14 7 17 22" fill="none" stroke="#174b38" stroke-linecap="round" stroke-width="5"/>
+
+  <!-- Blue approval seal with check -->
+  <circle cx="302" cy="249" r="52" fill="url(#blue)" stroke="#9ed8ef" stroke-width="3" filter="url(#shadow)"/>
+  <path d="m275 250 17 18 39-42" fill="none" stroke="#fff5d5" stroke-linecap="round" stroke-linejoin="round" stroke-width="11"/>
+  <path d="m275 250 17 18 39-42" fill="none" stroke="#e4bb55" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+
+  <!-- Open book / service foundation -->
+  <g fill="none" stroke="url(#seal)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M31 277c54-8 101 4 161 49 54-43 101-56 161-47" stroke-width="10"/>
+    <path d="M46 295c51-6 92 7 146 45 50-39 92-51 147-44" stroke-width="6"/>
+    <path d="M66 313c43-1 80 13 126 39 42-27 83-40 126-38" stroke-width="4"/>
+  </g>
+  <path d="M192 326v29" stroke="#fff0b8" stroke-linecap="round" stroke-width="3"/>
+
+  <!-- DepEd signature-color highlights around outer seal -->
+  <path d="M70 42a173 173 0 0 1 103-34" fill="none" stroke="#2376ba" stroke-linecap="round" stroke-width="7"/>
+  <path d="M213 8a173 173 0 0 1 73 29" fill="none" stroke="#c9373f" stroke-linecap="round" stroke-width="7"/>
+  <path d="M297 48a173 173 0 0 1 44 63" fill="none" stroke="#f3cc62" stroke-linecap="round" stroke-width="7"/>
+</svg>

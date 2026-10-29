@@ -60,5 +60,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+$showLoginWelcome = true;
 $organization = setting('organization');
 require __DIR__ . '/includes/login-view.php';

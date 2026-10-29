@@ -66,6 +66,38 @@
 }
 
 @media screen and (max-width: 720px) {
+  /* Full-bleed mobile content: remove outer gutters and align sections to screen edges. */
+  .app-shell,
+  .app-shell .main-shell {
+    width: 100%;
+    max-width: none;
+  }
+  .app-shell .content {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding-right: 0;
+    padding-left: 0;
+    box-sizing: border-box;
+  }
+
+  .app-shell,
+  .app-shell .main-shell,
+  .app-shell .content,
+  .app-shell .content > *,
+  .content :is(.panel, .stat-card, .vehicle-card, .profile-card, .welcome-banner, .filter-bar, .data-view-toolbar) {
+    box-sizing: border-box;
+    min-width: 0;
+  }
+
+  .app-shell .content :is(.panel, .stat-card, .vehicle-card, .profile-card, .welcome-banner, .filter-bar, .data-view-toolbar) {
+    max-width: 100%;
+  }
+
+  .app-shell .content :is(img, svg, canvas, video) {
+    max-width: 100%;
+  }
+
   .app-shell .main-shell,
   .app-shell .content,
   .content :is(.panel, .form-main, .form-grid > *, .detail-layout > *) {
@@ -205,6 +237,12 @@
     max-width: 100%;
     overflow-x: auto;
     overscroll-behavior-x: contain;
+  }
+  .content .data-table {
+    min-width: 620px;
+  }
+  .content :is(.table-scroll, #calendar-content)::-webkit-scrollbar {
+    height: 6px;
   }
   .content :is(.calendar-toolbar, .calendar-filters, .requester-summary) {
     flex-wrap: wrap;

@@ -3,13 +3,14 @@
   const key = 'vrs:theme',
     root = document.documentElement,
     system = window.matchMedia('(prefers-color-scheme: dark)');
-  let preference = null;
+  // Dark is the system default unless the user explicitly chooses light mode.
+  let preference = 'dark';
   try {
     const saved = localStorage.getItem(key);
     if (saved === 'light' || saved === 'dark') preference = saved;
   } catch (error) {}
   function apply() {
-    const mode = preference || (system.matches ? 'dark' : 'light');
+    const mode = preference;
     root.dataset.theme = mode;
     document
       .querySelector('meta[name="theme-color"]')
@@ -34,12 +35,9 @@
     document.querySelector('[data-theme-switch]')?.removeAttribute('hidden');
     apply();
   });
-  system.addEventListener('change', () => {
-    if (!preference) apply();
-  });
   window.addEventListener('storage', (event) => {
     if (event.key === key || event.key === null) {
-      preference = event.newValue === 'light' || event.newValue === 'dark' ? event.newValue : null;
+      preference = event.newValue === 'light' || event.newValue === 'dark' ? event.newValue : 'dark';
       apply();
     }
   });
