@@ -26,10 +26,8 @@
   async function loadWeather() {
     if (refresh.disabled) return;
     refresh.disabled = true;
-    weather.textContent = 'Detecting your location. Allow location access for local weather.';
     try {
       const location = await window.assistantWelcomeLocation('hello');
-      weather.textContent = 'Loading local weather…';
       const response = await fetch('api.php?action=welcome-weather', {
         method: 'POST',
         body: new URLSearchParams({ csrf: root.querySelector('[name=csrf]').value, ...location }),
