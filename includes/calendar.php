@@ -102,7 +102,7 @@ page_heading(
         />
     </div>
     <div id="calendar-content" aria-live="polite">
-        <div class="empty-state">Schedules will appear here.</div>
+        <div class="empty-state">Loading schedules...</div>
     </div>
     <div class="calendar-legend">
         <?php foreach (

@@ -18,7 +18,7 @@
     <div class="briefing-weather">
         <h3>Weather near you</h3>
         <p data-briefing-weather role="status">
-            Local weather is available when location access is enabled.
+            Detecting your location. Allow location access for local weather.
         </p>
         <button class="btn small" type="button" data-briefing-refresh>Refresh weather</button>
         <a
