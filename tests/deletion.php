@@ -1,6 +1,7 @@
 <?php
 require __DIR__ . '/../includes/functions.php';
 require __DIR__ . '/../includes/database.php';
+require __DIR__ . '/../includes/driver.php';
 require __DIR__ . '/../includes/personnel.php';
 require __DIR__ . '/../includes/auth.php';
 require __DIR__ . '/../includes/deletion.php';
@@ -12,6 +13,7 @@ $pdo = new PDO('sqlite::memory:', null, null, [
 $pdo->exec('PRAGMA foreign_keys=ON');
 initialize_database($pdo);
 personnel_schema($pdo);
+driver_schema($pdo);
 auth_schema($pdo);
 $admin = one('SELECT * FROM users WHERE id=1');
 $requester = one('SELECT * FROM users WHERE id=3');

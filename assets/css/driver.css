@@ -1,0 +1,149 @@
+.driver-intro {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 22px;
+    padding: 26px 30px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: linear-gradient(120deg, var(--white), var(--bg));
+}
+.driver-intro h2 {
+    margin: 7px 0 4px;
+    font-size: clamp(1.35rem, 3vw, 1.8rem);
+}
+.driver-intro p,
+.driver-trip-heading p {
+    margin: 0;
+    color: var(--muted);
+}
+.driver-intro-icon {
+    display: grid;
+    width: 58px;
+    height: 58px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 18px;
+    color: var(--green);
+    background: var(--green-light);
+}
+.driver-empty {
+    padding: 48px 24px;
+}
+.driver-trip-list {
+    display: grid;
+    gap: 18px;
+}
+.driver-trip {
+    padding: 24px;
+}
+.driver-trip-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+.driver-trip-heading h2 {
+    margin: 6px 0;
+    font-size: 1.25rem;
+}
+.driver-reference,
+.eyebrow {
+    color: var(--muted);
+    font-size: .73rem;
+    font-weight: 750;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+}
+.driver-trip-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 30px;
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+.driver-trip-meta div {
+    display: grid;
+    gap: 5px;
+}
+.driver-trip-meta span {
+    color: var(--muted);
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+}
+.driver-trip-meta strong {
+    font-size: .88rem;
+}
+.driver-report-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+}
+.driver-report-grid.is-single {
+    grid-template-columns: 1fr;
+}
+.driver-report-form {
+    display: grid;
+    align-content: start;
+    gap: 12px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg);
+}
+.driver-report-form h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+.driver-report-form label {
+    display: grid;
+    gap: 6px;
+    font-size: .84rem;
+    font-weight: 650;
+}
+.driver-report-form select,
+.driver-report-form textarea {
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--text);
+    background: var(--white);
+    font: inherit;
+}
+.driver-report-form textarea {
+    resize: vertical;
+}
+.driver-report-form .btn {
+    justify-self: start;
+}
+.driver-history {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+}
+.driver-history summary {
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 700;
+}
+.driver-history p {
+    margin: 10px 0 0;
+    font-size: .84rem;
+}
+@media (max-width: 700px) {
+    .driver-intro,
+    .driver-trip {
+        padding: 18px;
+    }
+    .driver-report-grid {
+        grid-template-columns: 1fr;
+    }
+}

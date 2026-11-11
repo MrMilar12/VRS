@@ -73,6 +73,13 @@ function deletion_problem(string $entity, array $record): string
             return 'This requisition has a vehicle movement record and must be kept for history.';
         }
         if (
+            $entity === 'requisitions' &&
+            (one('SELECT id FROM driver_trip_reports WHERE requisition_id=?', [$id]) ||
+                one('SELECT id FROM driver_vehicle_reports WHERE requisition_id=?', [$id]))
+        ) {
+            return 'This requisition has driver reports and must be kept for history.';
+        }
+        if (
             $entity === 'personnel_bookings' &&
             ($record['actual_start'] || $record['actual_end'])
         ) {
@@ -92,6 +99,8 @@ function deletion_problem(string $entity, array $record): string
             ['vehicle_blocks', 'created_by'],
             ['audit_logs', 'user_id'],
             ['print_logs', 'user_id'],
+            ['driver_trip_reports', 'user_id'],
+            ['driver_vehicle_reports', 'user_id'],
         ];
     } elseif ($entity === 'offices') {
         $links = [
@@ -106,6 +115,7 @@ function deletion_problem(string $entity, array $record): string
             ['requisitions', 'vehicle_id'],
             ['vehicle_blocks', 'vehicle_id'],
             ['vehicle_parts', 'vehicle_id'],
+            ['driver_vehicle_reports', 'vehicle_id'],
         ];
     } elseif ($entity === 'personnel') {
         $links = [
@@ -117,6 +127,15 @@ function deletion_problem(string $entity, array $record): string
             one('SELECT id FROM requisitions WHERE driver_id=?', [$record['driver_id']])
         ) {
             return 'This driver is linked to vehicle requisitions. Set the personnel record to Inactive instead.';
+        }
+        if (
+            $record['driver_id'] &&
+            one(
+                "SELECT id FROM users WHERE driver_id=? AND status<>'Rejected'",
+                [$record['driver_id']],
+            )
+        ) {
+            return 'This driver is linked to an account. Deactivate or unlink the account before deleting the personnel record.';
         }
     }
     foreach ($links as [$table, $column]) {

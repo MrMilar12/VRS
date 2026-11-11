@@ -68,7 +68,9 @@ if ($editing || $adding):
             ): ?><label
                 ><?= e($f['label']) ?><?php if (
                     isset($f['options'])
-                ): ?><select name="<?= $key ?>" required>
+                ): ?><select name="<?= $key ?>" <?= $f['optional'] ?? false
+                    ? ''
+                    : 'required' ?>>
                     <?php foreach (
                         $f['options']
                         as $value => $label

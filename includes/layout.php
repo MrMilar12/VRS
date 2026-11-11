@@ -28,6 +28,9 @@ function layout_start(string $page, string $title): void
         <?php if ($page === 'maintenance'): ?>
         <link rel="stylesheet" href="assets/css/maintenance.css?v=<?= filemtime(__DIR__ . '/../assets/css/maintenance.css') ?>" />
         <?php endif; ?>
+        <?php if ($page === 'driver'): ?>
+        <link rel="stylesheet" href="assets/css/driver.css?v=<?= filemtime(__DIR__ . '/../assets/css/driver.css') ?>" />
+        <?php endif; ?>
         <script src="assets/js/data-views.js?v=<?= filemtime(__DIR__ . '/../assets/js/data-views.js') ?>" defer></script>
         <script src="assets/js/app.js?v=<?= filemtime(__DIR__ . '/../assets/js/app.js') ?>" defer></script>
         <?php if ($page === 'maintenance'): ?>
@@ -48,7 +51,13 @@ function layout_start(string $page, string $title): void
                 <nav aria-label="Main navigation">
                     <div class="nav-label">WORKSPACE</div>
                     <?php
-                    $nav = [
+                    $nav = is_role('Driver')
+                        ? [
+                            ['driver', 'car', 'My trips'],
+                            ['notifications', 'bell', 'Notifications'],
+                            ['profile', 'users', 'My profile'],
+                        ]
+                        : [
                         ['dashboard', 'grid', 'Overview'],
                         ['profile', 'users', 'My profile'],
                         ['assistant', 'car', 'Booking & help assistant'],
@@ -84,7 +93,7 @@ function layout_start(string $page, string $title): void
                     ><?php
                     }
                     ?>
-                    <?php if (manage()): ?>
+                    <?php if (manage() && !is_role('Driver')): ?>
                     <div class="nav-label">FLEET MANAGEMENT</div>
                     <?php foreach (
                         [
@@ -155,7 +164,7 @@ function layout_start(string $page, string $title): void
                         ><strong><?= e($title) ?></strong>
                     </div>
                     <div class="topbar-tools">
-                    <div class="assistant-island" data-assistant-island>
+                    <?php if (!is_role('Driver')): ?><div class="assistant-island" data-assistant-island>
                         <form
                             class="header-tracking-search"
                             action="index.php"
@@ -175,7 +184,7 @@ function layout_start(string $page, string $title): void
                                 <?= icon('search', 18) ?>
                             </button>
                         </form>
-                    </div>
+                    </div><?php endif; ?>
                     <div class="top-actions">
                         <div
                             class="theme-switch"
@@ -292,7 +301,9 @@ function layout_start(string $page, string $title): void
         </dialog>
         <?php
         require __DIR__ . '/admin-confirm-dialog.php';
-        require __DIR__ . '/tracking-popup.php';?>
+        if (!is_role('Driver')) {
+            require __DIR__ . '/tracking-popup.php';
+        }?>
     </body>
 </html>
 <?php

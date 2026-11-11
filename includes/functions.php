@@ -224,6 +224,7 @@ function lock_record(string $table, int $id): ?array
             'drivers',
             'personnel',
             'personnel_bookings',
+            'driver_vehicle_reports',
         ])
     ) {
         throw new RuntimeException('Invalid resource.');

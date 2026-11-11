@@ -14,11 +14,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email = strtolower(trim(auth_input('email', 190)));
         $position = trim(auth_input('position', 160));
         $office = filter_var(auth_input('office_id', 20), FILTER_VALIDATE_INT);
+        $accountType = auth_input('account_type', 20);
+        if (!in_array($accountType, ['Requester', 'Driver'], true)) {
+            throw new RuntimeException('Choose a valid account type.');
+        }
         if ($name === '' || $position === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new RuntimeException('Enter your name, designation, and a valid email address.');
         }
         if (!$office || !one("SELECT id FROM offices WHERE id=? AND status='Active'", [$office])) {
             throw new RuntimeException('Select an active office.');
+        }
+        $driverId = null;
+        if ($accountType === 'Driver') {
+            $driverId = driver_registration_link(
+                trim(auth_input('employee_number', 80)),
+                $name,
+                (int) $office,
+            );
+            $position = 'Driver';
         }
         auth_limit('registration-email', $email, 3, 3600);
         $password = auth_input('password', 200);
@@ -31,18 +44,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!one('SELECT id FROM users WHERE email=?', [$email])) {
             try {
                 run(
-                    'INSERT INTO users(full_name,email,password_hash,role,office_id,position,status) VALUES(?,?,?,?,?,?,?)',
-                    [$name, $email, $hash, 'Requester', $office, $position, 'Pending'],
+                    'INSERT INTO users(full_name,email,password_hash,role,office_id,position,status,driver_id) VALUES(?,?,?,?,?,?,?,?)',
+                    [$name, $email, $hash, $accountType, $office, $position, 'Pending', $driverId],
                 );
                 $id = (int) $pdo->lastInsertId();
-                audit('Registration requested', 'Pending requester account #' . $id);
+                audit('Registration requested', 'Pending ' . strtolower($accountType) . ' account #' . $id);
                 foreach (
                     all("SELECT id FROM users WHERE role='Administrator' AND status='Active'")
                     as $admin
                 ) {
                     run('INSERT INTO notifications(user_id,message,created_at) VALUES(?,?,?)', [
                         $admin['id'],
-                        'A new account is awaiting review on the Account requests page.',
+                        'A new ' . strtolower($accountType) . ' account is awaiting review on the Account requests page.',
                         date('Y-m-d H:i:s'),
                     ]);
                 }
@@ -103,6 +116,15 @@ if (
                 is_string($_POST['email'] ?? null) ? $_POST['email'] : '',
             ) ?>" /></label
     ><label
+        >Account type<select name="account_type" required>
+            <option value="Requester" <?= ($_POST['account_type'] ?? '') === 'Requester'
+                ? 'selected'
+                : '' ?>>Requester</option>
+            <option value="Driver" <?= ($_POST['account_type'] ?? '') === 'Driver'
+                ? 'selected'
+                : '' ?>>Driver</option>
+        </select></label
+    ><label
         >Office / division<select name="office_id" required>
             <option value="">Select your office</option>
             <?php foreach (
@@ -116,6 +138,15 @@ if (
                 ) ?></option>
             <?php endforeach; ?>
         </select></label
+    ><label
+        >Employee number <span class="field-hint">Drivers must use the number on their existing personnel record.</span><input
+            name="employee_number"
+            maxlength="80"
+            autocomplete="off"
+            value="<?= e(
+                is_string($_POST['employee_number'] ?? null) ? $_POST['employee_number'] : '',
+            ) ?>"
+    /></label
     ><label
         >Designation / position<input
             name="position"
@@ -145,8 +176,8 @@ if (
             autocomplete="new-password"
     /></label>
     <p class="field-hint">
-        New accounts receive Requester access after administrator review. You cannot access the
-        workspace until your account is approved.
+        New accounts remain pending until an administrator confirms your identity and approves
+        access. Driver requests must match an existing driver personnel record.
     </p>
     <button class="auth-submit" type="submit">Request account <?= icon(
         'arrow',

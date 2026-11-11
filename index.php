@@ -4,7 +4,7 @@ if (!$user) {
     redirect('login.php');
 }
 require __DIR__ . '/includes/layout.php';
-$page = $_GET['page'] ?? 'dashboard';
+$page = $_GET['page'] ?? (is_role('Driver') ? 'driver' : 'dashboard');
 $pages = [
     'account-requests' => 'Account requests',
     'delete' => 'Delete record',
@@ -16,6 +16,7 @@ $pages = [
     'assistant' => 'Booking & help assistant',
     'profile' => 'My profile',
     'dashboard' => 'Overview',
+    'driver' => 'My trips',
     'calendar' => 'Vehicle calendar',
     'requisitions' => 'Requisitions',
     'create' => 'New requisition',
@@ -37,6 +38,12 @@ if (!is_string($page) || !isset($pages[$page])) {
     $page = 'notfound';
 }
 try {
+if (is_role('Driver') && !in_array($page, ['driver', 'profile', 'notifications'], true)) {
+    throw new RuntimeException('You do not have permission to access this page.');
+}
+if ($page === 'driver') {
+    require_role('Driver');
+}
     foreach (['id', 'edit'] as $parameter) {
         if (isset($_GET[$parameter])) {
             $_GET[$parameter] = record_link_id($_GET[$parameter], $page . ':' . $parameter);
@@ -103,6 +110,9 @@ switch ($page) {
         break;
     case 'dashboard':
         require __DIR__ . '/includes/dashboard.php';
+        break;
+    case 'driver':
+        require __DIR__ . '/includes/driver-view.php';
         break;
     case 'calendar':
         require __DIR__ . '/includes/calendar.php';

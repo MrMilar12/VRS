@@ -7,7 +7,7 @@ page_heading(
 );
 $reviewStatus = ($_GET['status'] ?? '') === 'Rejected' ? 'Rejected' : 'Pending';
 $pendingAccounts = all(
-    'SELECT u.id,u.full_name,u.email,u.position,u.status,o.name office_name FROM users u JOIN offices o ON o.id=u.office_id WHERE u.status=? ORDER BY u.id',
+    'SELECT u.id,u.full_name,u.email,u.position,u.role,u.driver_id,u.status,o.name office_name,d.employee_number FROM users u JOIN offices o ON o.id=u.office_id LEFT JOIN drivers d ON d.id=u.driver_id WHERE u.status=? ORDER BY u.id',
     [$reviewStatus],
 );
 ?>
@@ -44,7 +44,11 @@ $pendingAccounts = all(
             <h3><?= e($account['full_name']) ?></h3>
             <p><?= e(
                 $account['email'],
-            ) ?><br /><?= e($account['position']) ?> · <?= e($account['office_name']) ?></p>
+            ) ?><br /><?= e($account['position']) ?> · <?= e($account['office_name']) ?><br />Requested access: <strong><?= e($account['role']) ?></strong><?php if (
+                $account['role'] === 'Driver'
+            ): ?><br />Employee number: <?= e(
+                $account['employee_number'] ?? 'No linked driver record',
+            ) ?><?php endif; ?></p>
             <?= badge(
                 $account['status'],
             ) ?>
@@ -72,7 +76,7 @@ $pendingAccounts = all(
                 <div class="form-actions">
                     <button class="btn danger" name="decision" value="reject">Reject account</button
                     ><button class="btn primary" name="decision" value="approve">
-                        Approve Requester account
+                        Approve <?= e($account['role']) ?> account
                     </button>
                 </div>
             </form>

@@ -3,6 +3,16 @@ function record_schemas(): array
 {
     $options = fn($items) => array_combine($items, $items);
     $offices = array_column(all("SELECT id,name FROM offices WHERE status='Active'"), 'name', 'id');
+    $driverAccounts = ['' => 'Not linked to a driver'];
+    foreach (
+        all(
+            "SELECT d.id,p.full_name,d.employee_number FROM drivers d JOIN personnel p ON p.driver_id=d.id WHERE p.classification='Driver' ORDER BY p.full_name",
+        )
+        as $driver
+    ) {
+        $driverAccounts[$driver['id']] =
+            $driver['full_name'] . ' · ' . $driver['employee_number'];
+    }
     return [
         'personnel' => [
             'title' => 'Personnel',
@@ -95,7 +105,13 @@ function record_schemas(): array
                         'Administrative Officer',
                         'Dispatcher',
                         'Administrator',
+                        'Driver',
                     ]),
+                ],
+                'driver_id' => [
+                    'label' => 'Linked driver personnel record',
+                    'options' => $driverAccounts,
+                    'optional' => true,
                 ],
                 'status' => ['label' => 'Status', 'options' => $options(['Active', 'Inactive'])],
                 'password' => [

@@ -35,6 +35,13 @@ try {
         $action = 'approve';
     }
     if (
+        is_role('Driver') &&
+        !in_array($action, ['driver_trip_report', 'driver_vehicle_report', 'read_notifications', 'logout'], true) &&
+        !str_starts_with($action, 'factor_')
+    ) {
+        throw new RuntimeException('You do not have permission to perform this action.');
+    }
+    if (
         $action === 'review_registration' ||
         (in_array($action, ['save_record', 'delete_record'], true) &&
             ($_POST['entity'] ?? '') === 'users')
@@ -262,6 +269,7 @@ try {
                     $driver,
                     $id,
                 ]);
+                $r['driver_id'] = $driver;
             }
             run(
                 'INSERT INTO approvals(requisition_id,user_id,stage,decision,remarks,created_at) VALUES(?,?,?,?,?,?)',
@@ -355,6 +363,36 @@ try {
         run('UPDATE requisitions SET status=? WHERE id=?', [$new, $id]);
         audit('Request ' . $new, $r['reference'] . ' · ' . $remark);
         notify_request($r, $new);
+        if ($new === 'Approved' && !empty($r['driver_id'])) {
+            $assignment = one(
+        'SELECT r.reference,r.destination,r.start_datetime,v.model,v.plate
+         FROM requisitions r LEFT JOIN vehicles v ON v.id=r.vehicle_id WHERE r.id=?',
+        [$id],
+            );
+            driver_notification(
+        (int) $r['driver_id'],
+        'Trip assigned: ' .
+            $assignment['reference'] .
+            ' · ' .
+            $assignment['destination'] .
+            ' · ' .
+            ($assignment['model'] ?? 'Vehicle pending') .
+            ' (' .
+            ($assignment['plate'] ?? 'No plate') .
+            ') · ' .
+            shortdate($assignment['start_datetime'], 'M j, Y · g:i A'),
+        $id,
+            );
+        } elseif (
+            in_array($new, ['Dispatched', 'Returned', 'Completed', 'Cancelled'], true) &&
+            !empty($r['driver_id'])
+        ) {
+            driver_notification(
+        (int) $r['driver_id'],
+        $r['reference'] . ' · Trip marked ' . strtolower($new) . '.',
+        $id,
+            );
+        }
         flash('Request marked ' . strtolower($new) . '.');
     } elseif ($action === 'review_registration') {
         require_role('Administrator');
@@ -379,14 +417,39 @@ try {
                 'The requested office is inactive. Update the office before approval.',
             );
         }
-        run('UPDATE users SET status=?,role=? WHERE id=?', [
+        if ($decision === 'approve' && $pending['role'] === 'Driver') {
+            if (
+                empty($pending['driver_id']) ||
+                !one(
+                    "SELECT d.id FROM drivers d JOIN personnel p ON p.driver_id=d.id
+                     WHERE d.id=? AND d.status<>'Inactive' AND p.classification='Driver' AND p.status<>'Inactive' AND p.office_id=?",
+                    [$pending['driver_id'], $pending['office_id']],
+                )
+            ) {
+                throw new RuntimeException(
+                    'The linked driver record is no longer active or does not match the requested office.',
+                );
+            }
+            if (
+                one('SELECT id FROM users WHERE driver_id=? AND id<>? AND status<>\'Rejected\'', [
+                    $pending['driver_id'],
+                    $id,
+                ])
+            ) {
+                throw new RuntimeException('Another account is already using this driver record.');
+            }
+        }
+        run('UPDATE users SET status=?,driver_id=? WHERE id=?', [
             $decision === 'approve' ? 'Active' : 'Rejected',
-            'Requester',
+            $decision === 'approve' ? ($pending['driver_id'] ?? null) : null,
             $id,
         ]);
         audit(
             'Registration ' . ($decision === 'approve' ? 'approved' : 'rejected'),
-            'Account #' . $id,
+            'Account #' . $id .
+                ($decision === 'reject' && !empty($pending['driver_id'])
+                    ? ' · released driver record #' . $pending['driver_id']
+                    : ''),
         );
         flash(
             $decision === 'approve'
@@ -461,9 +524,53 @@ try {
                     'You cannot deactivate or demote your own administrator account.',
                 );
             }
+            $driverId = $values['driver_id'] === '' ? null : (int) $values['driver_id'];
+            if ($values['role'] === 'Driver') {
+                if (
+                    !$driverId ||
+                    !one(
+                        "SELECT d.id FROM drivers d JOIN personnel p ON p.driver_id=d.id
+                         WHERE d.id=? AND d.status<>'Inactive' AND p.classification='Driver' AND p.status<>'Inactive' AND p.office_id=?",
+                        [$driverId, $values['office_id']],
+                    )
+                ) {
+                    throw new RuntimeException('A Driver account must be linked to an active driver personnel record.');
+                }
+                if (
+                    one('SELECT id FROM users WHERE driver_id=? AND id<>? AND status<>\'Rejected\'', [
+                        $driverId,
+                        $id,
+                    ])
+                ) {
+                    throw new RuntimeException('That driver personnel record is already linked to another account.');
+                }
+                $values['driver_id'] = $driverId;
+            } else {
+                $values['driver_id'] = null;
+            }
         }
         if ($entity === 'personnel') {
+            $existing = $id ? one('SELECT driver_id FROM personnel WHERE id=?', [$id]) : null;
+            if (
+                $existing &&
+                $existing['driver_id'] &&
+                ($values['classification'] !== 'Driver' || $values['status'] === 'Inactive') &&
+                one(
+                    "SELECT id FROM users WHERE driver_id=? AND status<>'Rejected'",
+                    [$existing['driver_id']],
+                )
+            ) {
+                throw new RuntimeException(
+                    'Deactivate or unlink the driver account before changing or deactivating its personnel record.',
+                );
+            }
             $values = personnel_registry_values($values, $id);
+            if ($values['classification'] === 'Driver' && !empty($values['driver_id'])) {
+                run(
+                    "UPDATE users SET full_name=?,office_id=? WHERE driver_id=? AND role='Driver' AND status<>'Rejected'",
+                    [$values['full_name'], $values['office_id'], $values['driver_id']],
+                );
+            }
         }
         if (in_array($entity, ['vehicles', 'drivers']) && $id) {
             lock_record($entity, $id);
@@ -599,6 +706,96 @@ try {
         );
         $target = 'index.php?page=maintenance#parts';
         flash('Vehicle part removed from inventory.');
+    } elseif ($action === 'driver_trip_report') {
+        require_role('Driver');
+        auth_limit('driver-trip-report', (string) $user['id'], 30, 3600);
+        $driverId = (int) ($user['driver_id'] ?? 0);
+        if (!$driverId) {
+            throw new RuntimeException('Your account is not linked to a driver record. Contact your administrator.');
+        }
+        $id = number('id', 1);
+        $trip = one(
+            'SELECT id,reference,requester_id,status,driver_id FROM requisitions WHERE id=? AND driver_id=?',
+            [$id, $driverId],
+        );
+        if (
+            !$trip ||
+            !in_array($trip['status'], ['Approved', 'Dispatched'], true)
+        ) {
+            throw new RuntimeException('You can only report progress on your assigned trips.');
+        }
+        $type = field('update_type', 40);
+        if (!in_array($type, ['Departed', 'Delayed', 'Arrived', 'Trip complete', 'Other'], true)) {
+            throw new RuntimeException('Choose a valid trip update.');
+        }
+        if (
+            $trip['status'] === 'Approved' &&
+            !in_array($type, ['Departed', 'Delayed'], true)
+        ) {
+            throw new RuntimeException('Only departure and delay updates are available before dispatch.');
+        }
+        $remarks = field('remarks', 1000, false);
+        run(
+            'INSERT INTO driver_trip_reports(requisition_id,user_id,update_type,remarks,created_at) VALUES(?,?,?,?,?)',
+            [$id, $user['id'], $type, $remarks, date('Y-m-d H:i:s')],
+        );
+        $message = 'Driver update · ' . $type . ($remarks !== '' ? ': ' . $remarks : '');
+        notify_request($trip, $message);
+        notify_fleet_managers($trip['reference'] . ' · ' . $message, $id);
+        audit('Driver trip update', $trip['reference'] . ' · ' . $message);
+        $target = 'index.php?page=driver';
+        flash('Trip update sent to the travel team.');
+    } elseif ($action === 'driver_vehicle_report') {
+        require_role('Driver');
+        auth_limit('driver-vehicle-report', (string) $user['id'], 10, 3600);
+        $driverId = (int) ($user['driver_id'] ?? 0);
+        if (!$driverId) {
+            throw new RuntimeException('Your account is not linked to a driver record. Contact your administrator.');
+        }
+        $id = number('id', 1);
+        $trip = one(
+            'SELECT r.id,r.reference,r.requester_id,r.vehicle_id FROM requisitions r
+             WHERE r.id=? AND r.driver_id=?',
+            [$id, $driverId],
+        );
+        if (!$trip || !$trip['vehicle_id']) {
+            throw new RuntimeException('Vehicle issue reports must be attached to one of your assigned trips.');
+        }
+        $urgency = field('urgency', 30);
+        if (!in_array($urgency, ['Routine', 'Urgent', 'Vehicle unsafe'], true)) {
+            throw new RuntimeException('Choose a valid issue urgency.');
+        }
+        $description = field('description', 2000);
+        run(
+            'INSERT INTO driver_vehicle_reports(requisition_id,vehicle_id,user_id,urgency,description,created_at) VALUES(?,?,?,?,?,?)',
+            [$id, $trip['vehicle_id'], $user['id'], $urgency, $description, date('Y-m-d H:i:s')],
+        );
+        $message = 'Vehicle issue (' . $urgency . '): ' . $description;
+        notify_request($trip, $message);
+        notify_fleet_managers($trip['reference'] . ' · ' . $message, $id);
+        audit('Driver vehicle issue reported', $trip['reference'] . ' · ' . $message);
+        $target = 'index.php?page=driver';
+        flash('Vehicle issue sent to fleet management.');
+    } elseif ($action === 'resolve_driver_vehicle_report') {
+        require_role('Administrator', 'Administrative Officer');
+        $id = number('id', 1);
+        $report = lock_record('driver_vehicle_reports', $id);
+        if (!$report || $report['status'] !== 'Open') {
+            throw new RuntimeException('This vehicle report is no longer open.');
+        }
+        run("UPDATE driver_vehicle_reports SET status='Resolved' WHERE id=?", [$id]);
+        run(
+            'INSERT INTO notifications(user_id,message,requisition_id,created_at) VALUES(?,?,?,?)',
+            [
+                $report['user_id'],
+                'Your vehicle issue report #' . $id . ' has been marked resolved.',
+                $report['requisition_id'],
+                date('Y-m-d H:i:s'),
+            ],
+        );
+        audit('Driver vehicle report resolved', 'Report #' . $id);
+        $target = 'index.php?page=maintenance';
+        flash('Vehicle report marked resolved.');
     } elseif ($action === 'settings') {
         require_role('Administrator');
         $minutes = number('turnaround_minutes');

@@ -6,6 +6,16 @@ if ($page === 'maintenance') {
     $parts = all(
         'SELECT p.*,v.model,v.plate FROM vehicle_parts p JOIN vehicles v ON v.id=p.vehicle_id ORDER BY p.procurement_date DESC,p.id DESC',
     );
+    $driverReports = all(
+        "SELECT dr.id,dr.urgency,dr.description,dr.created_at,r.reference,r.destination,v.model,v.plate,u.full_name driver_name
+         FROM driver_vehicle_reports dr
+         JOIN requisitions r ON r.id=dr.requisition_id
+         JOIN vehicles v ON v.id=dr.vehicle_id
+         JOIN users u ON u.id=dr.user_id
+         WHERE dr.status='Open'
+         ORDER BY CASE dr.urgency WHEN 'Vehicle unsafe' THEN 0 WHEN 'Urgent' THEN 1 ELSE 2 END,dr.created_at DESC
+         LIMIT 100",
+    );
     $vehicles = all('SELECT * FROM vehicles ORDER BY model,plate');
     ?>
 <div class="maintenance-page">
@@ -130,6 +140,54 @@ if ($page === 'maintenance') {
                 </form>
             </section>
         </div>
+        <section class="panel maintenance-panel driver-issues-panel">
+            <div class="panel-heading maintenance-panel-heading">
+                <div>
+                    <span class="maintenance-panel-icon"><?= icon('wrench', 18) ?></span>
+                    <div><h2>Driver vehicle reports</h2><p>Issues reported from assigned trips</p></div>
+                </div>
+                <span class="maintenance-count"><?= count($driverReports) ?></span>
+            </div>
+            <?php if ($driverReports): ?>
+            <div class="driver-issues-list">
+                <?php foreach ($driverReports as $report): ?>
+                <article class="driver-issue-card">
+                    <div class="driver-issue-top">
+                        <div>
+                            <strong><?= e($report['model']) ?> · <?= e($report['plate']) ?></strong>
+                            <span><?= e($report['reference']) ?> · reported by <?= e(
+                                $report['driver_name'],
+                            ) ?></span>
+                        </div>
+                        <span class="driver-issue-urgency <?= $report['urgency'] === 'Vehicle unsafe'
+                            ? 'is-unsafe'
+                            : ($report['urgency'] === 'Urgent'
+                                ? 'is-urgent'
+                                : '') ?>"><?= e($report['urgency']) ?></span>
+                    </div>
+                    <p><?= nl2br(e($report['description'])) ?></p>
+                    <div class="driver-issue-footer">
+                        <small><?= e(
+                            $report['destination'],
+                        ) ?> · <?= shortdate($report['created_at'], 'M j, Y · g:i A') ?></small>
+                        <form action="actions.php" method="post" data-confirm="Mark this vehicle issue as resolved?">
+                            <?= csrf() ?><input type="hidden" name="action" value="resolve_driver_vehicle_report" />
+                            <input type="hidden" name="id" value="<?= (int) $report['id'] ?>" />
+                            <input type="hidden" name="return_to" value="index.php?page=maintenance" />
+                            <button class="btn small primary">Mark resolved</button>
+                        </form>
+                    </div>
+                </article>
+                <?php endforeach; ?>
+            </div>
+            <?php else: ?>
+            <div class="maintenance-empty driver-issues-empty">
+                <span><?= icon('check', 22) ?></span>
+                <strong>No open vehicle reports</strong>
+                <small>Driver-reported vehicle issues will appear here.</small>
+            </div>
+            <?php endif; ?>
+        </section>
     </section>
     </section>
 

@@ -29,6 +29,7 @@ header('Cache-Control: no-store');
 require_once __DIR__ . '/database.php';
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/personnel.php';
+require_once __DIR__ . '/driver.php';
 require_once __DIR__ . '/records.php';
 require_once __DIR__ . '/deletion.php';
 require_once __DIR__ . '/auth.php';
@@ -50,6 +51,7 @@ try {
         initialize_database($pdo);
     }
     personnel_schema($pdo);
+    driver_schema($pdo);
     vehicle_parts_schema($pdo);
 } catch (Throwable $e) {
     http_response_code(503);
