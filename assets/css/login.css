@@ -1311,3 +1311,90 @@
     height: 68px;
   }
 }
+
+.auth-seasonal {
+  position: relative;
+}
+.auth-refresh .auth-story::before,
+.auth-refresh.auth-seasonal .auth-form-wrap > .login-snow-panel {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: url('../images/snowflake.svg') 0 -490px / 420px 490px repeat;
+  animation: login-snowfall 32s linear infinite;
+  content: '';
+  pointer-events: none;
+}
+.auth-refresh .auth-story::before {
+  opacity: .3;
+  animation-duration: 42s;
+}
+.login-snow-panel {
+  opacity: .28;
+  animation-duration: 29s;
+  animation-delay: -13s;
+}
+@keyframes login-snowfall {
+  to {
+    background-position: 18px 0;
+  }
+}
+.auth-refresh.auth-seasonal .auth-form-wrap {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.auth-refresh.auth-seasonal .auth-form-wrap > :not(.login-snow-panel) {
+  position: relative;
+  z-index: 1;
+}
+.auth-refresh .auth-services {
+  position: relative;
+  z-index: 1;
+}
+.login-logo-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+.login-santa-hat {
+  position: absolute;
+  z-index: 3;
+  top: -1%;
+  right: 6%;
+  width: 32%;
+  height: auto;
+  filter: drop-shadow(0 2px 2px rgb(20 30 24 / 35%));
+  pointer-events: none;
+}
+.login-logo-wrap--welcome {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  width: min(58vw, 320px);
+  transform: translate(-50%, -62%);
+}
+.login-logo-wrap--welcome .login-welcome__fallback {
+  position: relative;
+  top: auto;
+  left: auto;
+  display: block;
+  width: 100%;
+  height: auto;
+  transform: none;
+}
+.login-logo-wrap--welcome .login-santa-hat {
+  top: 4%;
+  right: 15%;
+  width: 21%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-refresh .auth-story::before,
+  .auth-refresh.auth-seasonal .auth-form-wrap > .login-snow-panel {
+    animation: none;
+  }
+}

@@ -19,11 +19,14 @@
         <script src="assets/js/login-welcome.js?v=<?= filemtime(__DIR__ . '/../assets/js/login-welcome.js') ?>" defer></script>
         <?php endif; ?>
     </head>
-    <body class="auth-page auth-refresh">
+    <body class="auth-page auth-refresh auth-seasonal">
         <?php if ($showLoginWelcome): ?>
         <div class="system-boot system-boot--welcome login-welcome" id="login-welcome" aria-label="Welcome to VPRS">
             <div class="system-boot__content">
-                <img class="login-welcome__fallback" src="assets/images/vprslogo.png" width="260" height="260" alt="VPRS logo" />
+                <span class="login-logo-wrap login-logo-wrap--welcome">
+                    <img class="login-welcome__fallback" src="assets/images/vprslogo.png" width="260" height="260" alt="VPRS logo" />
+                    <img class="login-santa-hat" src="assets/images/santa-hat.svg" width="64" height="48" alt="" />
+                </span>
                 <video class="system-boot__video" autoplay muted playsinline preload="auto" poster="assets/images/vprslogo.png" aria-label="VPRS welcome animation">
                     <source src="assets/videos/vprs-welcome.mp4" type="video/mp4" />
                 </video>
@@ -44,7 +47,10 @@
         <main class="auth-layout">
             <section class="auth-story" aria-labelledby="story-title">
                 <a class="auth-brand" href="index.php" aria-label="DepEd SDO-AURORA VPRS home">
-                    <img class="system-logo auth-logo" src="assets/images/vprslogo.png" width="96" height="96" alt="" fetchpriority="high" />
+                    <span class="login-logo-wrap">
+                        <img class="system-logo auth-logo" src="assets/images/vprslogo.png" width="96" height="96" alt="" fetchpriority="high" />
+                        <img class="login-santa-hat" src="assets/images/santa-hat.svg" width="64" height="48" alt="" />
+                    </span>
                     <span>VPRS<span class="auth-brand-caption">VEHICLE &amp; PERSONNEL</span><span class="brand-organization">DepEd SDO-AURORA</span></span>
                 </a>
                 <div class="auth-story-copy">
@@ -68,9 +74,13 @@
                     ><span class="auth-edition">SDO-AURORA</span>
                 </div>
                 <div class="auth-form-wrap">
+                    <div class="login-snow-panel" aria-hidden="true"></div>
                     <!-- Duplicate branding for mobile view -->
                     <div class="auth-brand mobile-only">
-                        <img class="system-logo auth-logo" src="assets/images/vprslogo.png" width="80" height="80" alt="" />
+                        <span class="login-logo-wrap">
+                            <img class="system-logo auth-logo" src="assets/images/vprslogo.png" width="80" height="80" alt="" />
+                            <img class="login-santa-hat" src="assets/images/santa-hat.svg" width="64" height="48" alt="" />
+                        </span>
                         <span>VPRS<span class="auth-brand-caption">VEHICLE &amp; PERSONNEL</span><span class="brand-organization">DepEd SDO-AURORA</span></span>
                     </div>
                     <div class="auth-story-copy mobile-only" style="text-align: center; margin-bottom: 30px;">

@@ -392,7 +392,7 @@ body.dark-mode .auth-refresh .auth-layout::after {
     gap: 0;
     min-height: 100svh;
     width: 100%;
-    padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+    padding: max(20px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   }
   .auth-refresh .theme-toggle {
     top: max(12px, env(safe-area-inset-top));
@@ -405,6 +405,7 @@ body.dark-mode .auth-refresh .auth-layout::after {
   .auth-refresh .auth-story-copy.mobile-only { display: flex !important; }
   .auth-refresh .auth-entry {
     width: 100%;
+    padding: 0;
   }
   .auth-refresh .auth-entry-top { display: none; }
   .auth-refresh .auth-form-wrap {
@@ -415,8 +416,9 @@ body.dark-mode .auth-refresh .auth-layout::after {
     backdrop-filter: blur(30px);
     border: 1px solid var(--auth-glass-border);
     max-width: 480px;
+    width: 100%;
     padding: 30px 22px 24px;
-    border-radius: 24px;
+    border-radius: 22px;
     box-shadow: var(--auth-form-shadow);
     text-align: left;
   }
