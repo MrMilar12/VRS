@@ -50,6 +50,7 @@ try {
         initialize_database($pdo);
     }
     personnel_schema($pdo);
+    vehicle_parts_schema($pdo);
 } catch (Throwable $e) {
     http_response_code(503);
     exit(

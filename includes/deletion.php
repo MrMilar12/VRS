@@ -102,7 +102,11 @@ function deletion_problem(string $entity, array $record): string
             ['personnel_bookings', 'office_id'],
         ];
     } elseif ($entity === 'vehicles') {
-        $links = [['requisitions', 'vehicle_id'], ['vehicle_blocks', 'vehicle_id']];
+        $links = [
+            ['requisitions', 'vehicle_id'],
+            ['vehicle_blocks', 'vehicle_id'],
+            ['vehicle_parts', 'vehicle_id'],
+        ];
     } elseif ($entity === 'personnel') {
         $links = [
             ['personnel_bookings', 'personnel_id'],

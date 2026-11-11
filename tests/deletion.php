@@ -57,6 +57,12 @@ $vehicleId = (int) $pdo->lastInsertId();
 $user = $requester;
 refuse_delete('vehicles', $vehicleId, 'Requester cannot delete fleet records');
 $user = $admin;
+run(
+    "INSERT INTO vehicle_parts(vehicle_id,part_name,brand,procurement_date,lifespan) VALUES(?,?,?,?,?)",
+    [$vehicleId, 'Tires', 'Test Brand', '2026-01-15', '3 years'],
+);
+refuse_delete('vehicles', $vehicleId, 'Vehicle with parts inventory protected');
+run('DELETE FROM vehicle_parts WHERE vehicle_id=?', [$vehicleId]);
 perform_delete('vehicles', $vehicleId);
 verify_delete(!one('SELECT id FROM vehicles WHERE id=?', [$vehicleId]), 'Unused vehicle deleted');
 run("INSERT INTO offices(code,name) VALUES('DEL','Unused office')");

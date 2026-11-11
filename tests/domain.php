@@ -20,6 +20,23 @@ function verify(bool $condition, string $label): void
     echo 'PASS: ' . $label . "\n";
 }
 verify(count(all('SELECT * FROM vehicles')) === 6, 'Demo fleet seeded');
+run(
+    'INSERT INTO vehicle_parts(vehicle_id,part_name,brand,procurement_date,lifespan) VALUES(?,?,?,?,?)',
+    [1, 'Tires', 'Test Brand', '2026-01-15', '3 years or 60,000 km'],
+);
+verify(
+    one(
+        'SELECT p.part_name,p.brand,p.procurement_date,p.lifespan,v.plate FROM vehicle_parts p JOIN vehicles v ON v.id=p.vehicle_id WHERE p.vehicle_id=?',
+        [1],
+    ) === [
+        'part_name' => 'Tires',
+        'brand' => 'Test Brand',
+        'procurement_date' => '2026-01-15',
+        'lifespan' => '3 years or 60,000 km',
+        'plate' => 'SAB 1234',
+    ],
+    'Vehicle parts inventory stores procurement details and vehicle',
+);
 run("DELETE FROM requisitions WHERE status NOT IN ('Completed','Dispatched','Approved')");
 $day = date('Y-m-d', strtotime('+10 days'));
 run(

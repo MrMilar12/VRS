@@ -7,6 +7,33 @@ function initialize_database(PDO $db): void
     }
     seed_database($db);
 }
+function vehicle_parts_schema(PDO $db): void
+{
+    if ($db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql') {
+        $db->exec(
+            'CREATE TABLE IF NOT EXISTS vehicle_parts(
+                id INTEGER PRIMARY KEY AUTO_INCREMENT,
+                vehicle_id INTEGER NOT NULL,
+                part_name VARCHAR(120) NOT NULL,
+                brand VARCHAR(120) NOT NULL,
+                procurement_date DATE NOT NULL,
+                lifespan VARCHAR(120) NOT NULL,
+                FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4',
+        );
+        return;
+    }
+    $db->exec(
+        'CREATE TABLE IF NOT EXISTS vehicle_parts(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            vehicle_id INTEGER NOT NULL REFERENCES vehicles(id),
+            part_name VARCHAR(120) NOT NULL,
+            brand VARCHAR(120) NOT NULL,
+            procurement_date DATE NOT NULL,
+            lifespan VARCHAR(120) NOT NULL
+        )',
+    );
+}
 function seed_database(PDO $db): void
 {
     $insert = function ($table, $data) use ($db) {

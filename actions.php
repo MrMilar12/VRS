@@ -561,6 +561,44 @@ try {
         delete_record('vehicle_blocks', $id);
         $target = 'index.php?page=maintenance';
         flash('Maintenance block removed.');
+    } elseif ($action === 'add_vehicle_part') {
+        require_role('Administrator', 'Administrative Officer');
+        $vehicleId = number('vehicle_id', 1);
+        if (!one('SELECT id FROM vehicles WHERE id=?', [$vehicleId])) {
+            throw new RuntimeException('Vehicle not found.');
+        }
+        $partName = field('part_name', 120);
+        $brand = field('brand', 120);
+        $procurementDate = field('procurement_date', 10);
+        $date = DateTime::createFromFormat('!Y-m-d', $procurementDate);
+        if (!$date || $date->format('Y-m-d') !== $procurementDate) {
+            throw new RuntimeException('Enter a valid procurement date.');
+        }
+        $lifespan = field('lifespan', 120);
+        run(
+            'INSERT INTO vehicle_parts(vehicle_id,part_name,brand,procurement_date,lifespan) VALUES(?,?,?,?,?)',
+            [$vehicleId, $partName, $brand, $procurementDate, $lifespan],
+        );
+        audit(
+            'Vehicle part added',
+            $partName . ' · ' . $brand . ' · Vehicle #' . $vehicleId,
+        );
+        $target = 'index.php?page=maintenance#parts';
+        flash('Vehicle part added to inventory.');
+    } elseif ($action === 'delete_vehicle_part') {
+        require_role('Administrator', 'Administrative Officer');
+        $id = number('id', 1);
+        $part = one('SELECT * FROM vehicle_parts WHERE id=?', [$id]);
+        if (!$part) {
+            throw new RuntimeException('Vehicle part not found.');
+        }
+        run('DELETE FROM vehicle_parts WHERE id=?', [$id]);
+        audit(
+            'Vehicle part removed',
+            $part['part_name'] . ' · ' . $part['brand'] . ' · Vehicle #' . $part['vehicle_id'],
+        );
+        $target = 'index.php?page=maintenance#parts';
+        flash('Vehicle part removed from inventory.');
     } elseif ($action === 'settings') {
         require_role('Administrator');
         $minutes = number('turnaround_minutes');

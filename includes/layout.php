@@ -25,8 +25,14 @@ function layout_start(string $page, string $title): void
         <link rel="stylesheet" href="assets/css/theme.css?v=<?= filemtime(__DIR__ . '/../assets/css/theme.css') ?>" />
         <link rel="stylesheet" href="assets/css/workspace-palette.css?v=<?= filemtime(__DIR__ . '/../assets/css/workspace-palette.css') ?>" />
         <link rel="stylesheet" href="assets/css/mobile.css?v=<?= filemtime(__DIR__ . '/../assets/css/mobile.css') ?>" />
+        <?php if ($page === 'maintenance'): ?>
+        <link rel="stylesheet" href="assets/css/maintenance.css?v=<?= filemtime(__DIR__ . '/../assets/css/maintenance.css') ?>" />
+        <?php endif; ?>
         <script src="assets/js/data-views.js?v=<?= filemtime(__DIR__ . '/../assets/js/data-views.js') ?>" defer></script>
         <script src="assets/js/app.js?v=<?= filemtime(__DIR__ . '/../assets/js/app.js') ?>" defer></script>
+        <?php if ($page === 'maintenance'): ?>
+        <script src="assets/js/maintenance.js?v=<?= filemtime(__DIR__ . '/../assets/js/maintenance.js') ?>" defer></script>
+        <?php endif; ?>
     </head>
     <body>
         <div class="app-shell">
